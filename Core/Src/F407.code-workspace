@@ -1,0 +1,16 @@
+{
+	"folders": [
+		{
+			"name": "F407",
+			"path": "../.."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"gpio.h": "c",
+			"main.h": "c",
+			"stdio.h": "c",
+			"usart.h": "c"
+		}
+	}
+}
