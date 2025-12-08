@@ -5,7 +5,7 @@
 
 #include "rtc.h"
 #include <string.h>
-
+#include <stdio.h>
 /* RTC句柄定义 */
 RTC_HandleTypeDef hrtc;
 

@@ -21,11 +21,6 @@
 #include "usart.h"
 
 /* USER CODE BEGIN 0 */
-
-/* USER CODE END 0 */
-
-UART_HandleTypeDef huart1;
-
 #include <string.h>
 #include <stdio.h>
 
@@ -38,6 +33,9 @@ int _write(int file, char *ptr, int len)
     // 返回写入的字节数
     return (status == HAL_OK) ? len : -1;
 }
+/* USER CODE END 0 */
+
+UART_HandleTypeDef huart1;
 
 /* USART1 init function */
 
