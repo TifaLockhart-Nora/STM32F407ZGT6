@@ -2,6 +2,6 @@
     "name": "DEMO",
     "version": "1.0.0",
     "build": {
-        "srcFilter": "+<*.c>"
+        "srcFilter": "+<*.c> +<test/*.c>"
     }
 }

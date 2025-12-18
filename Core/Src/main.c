@@ -31,6 +31,7 @@
 /* USER CODE BEGIN Includes */
 #include <inttypes.h>
 #include "demo.h"
+#include "test/test.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -327,6 +328,7 @@ void start_task(void *arg)
     LOG_ERROR("Failed to mount SD card");
   }
   demo();
+  test();
   while (1)
   {
     // LOG_INFO("Task1 is running");
