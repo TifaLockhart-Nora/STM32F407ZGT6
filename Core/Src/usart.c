@@ -27,7 +27,6 @@
 int _write(int file, char *ptr, int len)
 {
 
-    // 发送数据
     HAL_StatusTypeDef status = HAL_UART_Transmit(&huart1, (uint8_t *)ptr, len,HAL_MAX_DELAY );
     
     // 返回写入的字节数

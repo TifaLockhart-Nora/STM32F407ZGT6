@@ -26,10 +26,11 @@
 #include "usart.h"
 #include "usb_device.h"
 #include "gpio.h"
-#include "log.h"
+
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include <inttypes.h>
+#include "demo.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -55,19 +56,281 @@
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 void MX_FREERTOS_Init(void);
+HAL_StatusTypeDef SD_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+#include "log.h"
+
+HAL_StatusTypeDef SD_Init(void)
+{
+  HAL_StatusTypeDef status;
+
+  // 初始化SD卡
+  LOG_INFO("Initializing SD card...");
+
+  // 禁用SDIO外设
+  __HAL_RCC_SDIO_CLK_DISABLE();
+  osDelay(10);
+
+  // 重新启用SDIO外设
+  __HAL_RCC_SDIO_CLK_ENABLE();
+  osDelay(10);
+
+  // 使用较低的时钟频率进行初始化
+  hsd.Init.ClockDiv = 118; // 约400kHz，符合SD卡初始化规范
+  LOG_INFO("Setting SDIO clock to low speed (ClockDiv=%d)", hsd.Init.ClockDiv);
+
+  status = HAL_SD_Init(&hsd);
+  if (status != HAL_OK)
+  {
+    LOG_ERROR("SD card initialization failed with status: %d", status);
+
+    // 尝试使用更保守的设置再次初始化
+    LOG_INFO("Attempting with more conservative settings...");
+    hsd.Init.ClockDiv = 178; // 更低的时钟频率
+    status = HAL_SD_Init(&hsd);
+    if (status != HAL_OK)
+    {
+      LOG_ERROR("Second initialization attempt also failed with status: %d", status);
+      return status;
+    }
+  }
+  LOG_INFO("SD card initialized successfully at low speed");
+
+  // 等待SD卡稳定
+  osDelay(100); // 等待100ms
+
+  // 逐步提高时钟频率
+  LOG_INFO("Increasing SDIO clock frequency to medium speed...");
+  __HAL_SD_DISABLE(&hsd);
+  hsd.Init.ClockDiv = 10; // 约4MHz
+  status = HAL_SD_Init(&hsd);
+  if (status != HAL_OK)
+  {
+    LOG_ERROR("Failed to increase SDIO clock frequency to medium speed, status: %d", status);
+    // 继续使用较低的时钟频率
+  }
+  else
+  {
+    LOG_INFO("SDIO clock frequency increased to medium speed successfully");
+    osDelay(50); // 等待50ms
+
+    // 尝试进一步提高时钟频率
+    LOG_INFO("Increasing SDIO clock frequency to high speed...");
+    __HAL_SD_DISABLE(&hsd);
+    hsd.Init.ClockDiv = 1; // 约16MHz
+    status = HAL_SD_Init(&hsd);
+    if (status != HAL_OK)
+    {
+      LOG_ERROR("Failed to increase SDIO clock frequency to high speed, status: %d", status);
+      // 回退到中等速度
+      __HAL_SD_DISABLE(&hsd);
+      hsd.Init.ClockDiv = 10;
+      HAL_SD_Init(&hsd);
+      LOG_INFO("Reverted to medium speed");
+    }
+    else
+    {
+      LOG_INFO("SDIO clock frequency increased to high speed successfully");
+    }
+  }
+
+  // 配置SD卡为4位总线宽度
+  LOG_INFO("Configuring SD card for 4-bit bus width...");
+  status = HAL_SD_ConfigWideBusOperation(&hsd, SDIO_BUS_WIDE_4B);
+  if (status != HAL_OK)
+  {
+    LOG_ERROR("Failed to configure 4-bit bus width, status: %d", status);
+    // 继续使用1位总线宽度
+    LOG_INFO("Continuing with 1-bit bus width");
+  }
+  else
+  {
+    LOG_INFO("SD card configured for 4-bit bus width");
+  }
+
+  // 设置SD卡块大小
+  status = HAL_SD_ConfigBlockSize(&hsd, 512);
+  if (status != HAL_OK)
+  {
+    LOG_ERROR("Failed to set block size, status: %d", status);
+  }
+
+  return HAL_OK;
+}
+
+void show_sdcard_info(void)
+{
+  // 检查SD卡状态
+  HAL_SD_CardInfoTypeDef cardInfo;
+  if (HAL_SD_GetCardInfo(&hsd, &cardInfo) != HAL_OK)
+  {
+    LOG_ERROR("Failed to get SD card info");
+  }
+  else
+  {
+    LOG_INFO("SD Card Info:");
+    LOG_INFO("  CardType: %d", cardInfo.CardType);
+    LOG_INFO("  CardVersion: %d", cardInfo.CardVersion);
+    LOG_INFO("  BlockNbr: %lu", (unsigned long)cardInfo.BlockNbr);
+    LOG_INFO("  BlockSize: %lu", (unsigned long)cardInfo.BlockSize);
+    LOG_INFO("  LogBlockNbr: %lu", (unsigned long)cardInfo.LogBlockNbr);
+    LOG_INFO("  LogBlockSize: %lu", (unsigned long)cardInfo.LogBlockSize); // 计算SD卡总容量 (BlockNbr * BlockSize)
+    uint64_t totalBytes = (uint64_t)cardInfo.BlockNbr * cardInfo.BlockSize;
+    uint32_t totalMB = (uint32_t)(totalBytes / (1024 * 1024));
+    uint32_t totalGB_int = totalMB / 1024;
+    uint32_t totalGB_frac = (totalMB % 1024) * 100 / 1024; // 小数部分，保留2位    LOG_INFO("  Total Capacity: %lu MB (%lu.%02lu GB)", totalMB, totalGB_int, totalGB_frac);
+
+    // 浮点打印测试
+    float totalGB_float = (float)totalMB / 1024.0f;
+    LOG_INFO("  Total Capacity (float): %.2f GB", totalGB_float);
+    LOG_INFO("  totalBytes = %llu", totalBytes);
+  }
+
+  // 使用 FatFs 获取磁盘使用情况
+
+  FATFS *fs;
+  DWORD fre_clust, fre_sect, tot_sect;
+
+  // 获取卷信息和空闲簇数量
+  FRESULT res = f_getfree(SDPath, &fre_clust, &fs);
+  if (res == FR_OK)
+  {
+    // 计算总扇区数和空闲扇区数
+    tot_sect = (fs->n_fatent - 2) * fs->csize; // 总扇区数
+    fre_sect = fre_clust * fs->csize;          // 空闲扇区数
+
+    // 转换为 MB (扇区大小通常为 512 字节)
+    uint32_t totalMB = tot_sect / 2048; // tot_sect * 512 / 1024 / 1024
+    uint32_t freeMB = fre_sect / 2048;  // fre_sect * 512 / 1024 / 1024
+    uint32_t usedMB = totalMB - freeMB;
+    LOG_INFO("Disk Space Info:");
+    LOG_INFO("  Total: %lu MB", totalMB);
+    LOG_INFO("  Used:  %lu MB", usedMB);
+    LOG_INFO("  Free:  %lu MB", freeMB);
+    uint32_t usagePercent = usedMB * 100 / totalMB;
+    uint32_t usageFrac = (usedMB * 1000 / totalMB) % 10; // 小数点后一位
+    LOG_INFO("  Usage: %lu.%lu%%", usagePercent, usageFrac);
+  }
+  else
+  {
+    LOG_ERROR("Failed to get free space: %d", res);
+  }
+}
 
 void start_task(void *arg)
 {
+
+  LOG_INFO("Attempting to mount SD card...");
+  FRESULT mountResult = f_mount(&SDFatFS, SDPath, 1);
+  LOG_INFO("Mount result: %d,SDPath = %s", mountResult, SDPath);
+
+  switch (mountResult)
+  {
+  case FR_OK:
+    LOG_INFO("SD card mounted successfully");
+    break;
+  case FR_NO_FILESYSTEM:
+    LOG_ERROR("No FAT filesystem on SD card");
+    break;
+  case FR_DISK_ERR:
+    LOG_ERROR("Disk I/O error");
+    break;
+  case FR_NOT_READY:
+    LOG_ERROR("SD card not ready");
+    break;
+  default:
+    LOG_ERROR("Mount failed with error code: %d", mountResult);
+    break;
+  }
+
+  if (mountResult == FR_OK)
+  {
+    FRESULT res;
+    UINT bytesWritten;
+
+    show_sdcard_info();
+
+    // 创建文件
+    LOG_INFO("Attempting to create file...");
+
+    // 检查SD卡状态
+    HAL_SD_CardStateTypeDef cardState = HAL_SD_GetCardState(&hsd);
+    LOG_INFO("SD card state before file creation: %d", cardState);
+
+    char filePath[20];
+    sprintf(filePath, "%stest.txt", SDPath);
+    LOG_INFO("Opening file: %s", filePath);
+
+    res = f_open(&SDFile, filePath, FA_CREATE_ALWAYS | FA_WRITE);
+
+    if (res == FR_OK)
+    {
+      // 写入数据
+      LOG_INFO("File created successfully, preparing to write data...");
+      const char *data = "Hello from STM32F407 with FatFs!";
+      LOG_INFO("Data length: %d bytes", strlen(data));
+
+      // 添加超时机制
+      uint32_t writeStartTime = HAL_GetTick();
+      LOG_INFO("Starting write operation at tick: %lu", writeStartTime);
+
+      FRESULT r = f_write(&SDFile, data, strlen(data), &bytesWritten);
+
+      uint32_t writeEndTime = HAL_GetTick();
+      LOG_INFO("Write operation completed at tick: %lu, duration: %lu ms", writeEndTime, writeEndTime - writeStartTime);
+
+      if (r == FR_OK)
+      {
+        LOG_INFO("Data written successfully, bytes written: %d", bytesWritten);
+      }
+      else
+      {
+        LOG_ERROR("Failed to write data: %d", r);
+      }
+      // 关闭文件
+      LOG_INFO("Closing file...");
+      f_close(&SDFile);
+      LOG_INFO("File closed");
+    }
+    else
+    {
+      LOG_ERROR("Failed to create file: %d", res);
+    }
+
+    // 读取文件
+    LOG_INFO("Attempting to read file...");
+    res = f_open(&SDFile, filePath, FA_READ);
+    if (res == FR_OK)
+    {
+      char buffer[256];
+      UINT bytesRead;
+      res = f_read(&SDFile, buffer, sizeof(buffer) - 1, &bytesRead);
+      buffer[bytesRead] = '\0'; // 确保字符串终止
+      if (res == FR_OK)
+      {
+        LOG_INFO("Data read from file:bytesRead = %d, %s", bytesRead, buffer);
+      }
+      else
+      {
+        LOG_ERROR("Failed to read file: %d", res);
+      }
+      f_close(&SDFile);
+    }
+  }
+  else
+  {
+    LOG_ERROR("Failed to mount SD card");
+  }
+  demo();
   while (1)
   {
     // LOG_INFO("Task1 is running");
-    //翻转led0
+    // 翻转led0
     HAL_GPIO_TogglePin(LED0_GPIO_Port, LED0_Pin);
     vTaskDelay(500);
   }
@@ -85,9 +348,9 @@ void process_task(void *arg)
 /* USER CODE END 0 */
 
 /**
-  * @brief  The application entry point.
-  * @retval int
-  */
+ * @brief  The application entry point.
+ * @retval int
+ */
 int main(void)
 {
   /* USER CODE BEGIN 1 */
@@ -119,13 +382,13 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   log_set_level(LOG_LEVEL_DEBUG);
-  xTaskCreate(start_task, "Task1", 128, NULL, 1, NULL);
-  xTaskCreate(process_task, "Task2", 128, NULL, 1, NULL);
+  xTaskCreate(start_task, "Task1", 2048, NULL, 1, NULL);
+  // xTaskCreate(process_task, "Task2", 128, NULL, 1, NULL);
 
   /* USER CODE END 2 */
 
   /* Init scheduler */
-  osKernelInitialize();  /* Call init function for freertos objects (in freertos.c) */
+  osKernelInitialize(); /* Call init function for freertos objects (in freertos.c) */
   MX_FREERTOS_Init();
   /* Start scheduler */
   osKernelStart();
@@ -143,21 +406,21 @@ int main(void)
 }
 
 /**
-  * @brief System Clock Configuration
-  * @retval None
-  */
+ * @brief System Clock Configuration
+ * @retval None
+ */
 void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
   /** Configure the main internal regulator output voltage
-  */
+   */
   __HAL_RCC_PWR_CLK_ENABLE();
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
   /** Initializes the RCC Oscillators according to the specified parameters
-  * in the RCC_OscInitTypeDef structure.
-  */
+   * in the RCC_OscInitTypeDef structure.
+   */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
@@ -171,9 +434,8 @@ void SystemClock_Config(void)
     Error_Handler();
   }
   /** Initializes the CPU, AHB and APB buses clocks
-  */
-  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
-                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+   */
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
@@ -190,19 +452,20 @@ void SystemClock_Config(void)
 /* USER CODE END 4 */
 
 /**
-  * @brief  Period elapsed callback in non blocking mode
-  * @note   This function is called  when TIM1 interrupt took place, inside
-  * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
-  * a global variable "uwTick" used as application time base.
-  * @param  htim : TIM handle
-  * @retval None
-  */
+ * @brief  Period elapsed callback in non blocking mode
+ * @note   This function is called  when TIM1 interrupt took place, inside
+ * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
+ * a global variable "uwTick" used as application time base.
+ * @param  htim : TIM handle
+ * @retval None
+ */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
   /* USER CODE BEGIN Callback 0 */
 
   /* USER CODE END Callback 0 */
-  if (htim->Instance == TIM1) {
+  if (htim->Instance == TIM1)
+  {
     HAL_IncTick();
   }
   /* USER CODE BEGIN Callback 1 */
@@ -211,9 +474,9 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 }
 
 /**
-  * @brief  This function is executed in case of error occurrence.
-  * @retval None
-  */
+ * @brief  This function is executed in case of error occurrence.
+ * @retval None
+ */
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
@@ -222,14 +485,14 @@ void Error_Handler(void)
   /* USER CODE END Error_Handler_Debug */
 }
 
-#ifdef  USE_FULL_ASSERT
+#ifdef USE_FULL_ASSERT
 /**
-  * @brief  Reports the name of the source file and the source line number
-  *         where the assert_param error has occurred.
-  * @param  file: pointer to the source file name
-  * @param  line: assert_param error line source number
-  * @retval None
-  */
+ * @brief  Reports the name of the source file and the source line number
+ *         where the assert_param error has occurred.
+ * @param  file: pointer to the source file name
+ * @param  line: assert_param error line source number
+ * @retval None
+ */
 void assert_failed(uint8_t *file, uint32_t line)
 {
   /* USER CODE BEGIN 6 */
