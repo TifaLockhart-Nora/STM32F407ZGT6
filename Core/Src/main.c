@@ -32,6 +32,7 @@
 #include <inttypes.h>
 #include "demo.h"
 #include "test/test.h"
+#include "rtc.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -223,6 +224,77 @@ void show_sdcard_info(void)
   }
 }
 
+void test_sd_read_write(void)
+{
+  FRESULT res;
+  UINT bytesWritten;
+  // 创建文件
+  LOG_INFO("Attempting to create file...");
+
+  // 检查SD卡状态
+  HAL_SD_CardStateTypeDef cardState = HAL_SD_GetCardState(&hsd);
+  LOG_INFO("SD card state before file creation: %d", cardState);
+
+  char filePath[20];
+  sprintf(filePath, "%stest.txt", SDPath);
+  LOG_INFO("Opening file: %s", filePath);
+
+  res = f_open(&SDFile, filePath, FA_CREATE_ALWAYS | FA_WRITE);
+
+  if (res == FR_OK)
+  {
+    // 写入数据
+    LOG_INFO("File created successfully, preparing to write data...");
+    const char *data = "Hello from STM32F407 with FatFs!";
+    LOG_INFO("Data length: %d bytes", strlen(data));
+
+    // 添加超时机制
+    uint32_t writeStartTime = HAL_GetTick();
+    LOG_INFO("Starting write operation at tick: %lu", writeStartTime);
+
+    FRESULT r = f_write(&SDFile, data, strlen(data), &bytesWritten);
+
+    uint32_t writeEndTime = HAL_GetTick();
+    LOG_INFO("Write operation completed at tick: %lu, duration: %lu ms", writeEndTime, writeEndTime - writeStartTime);
+
+    if (r == FR_OK)
+    {
+      LOG_INFO("Data written successfully, bytes written: %d", bytesWritten);
+    }
+    else
+    {
+      LOG_ERROR("Failed to write data: %d", r);
+    }
+    // 关闭文件
+    LOG_INFO("Closing file...");
+    f_close(&SDFile);
+    LOG_INFO("File closed");
+  }
+  else
+  {
+    LOG_ERROR("Failed to create file: %d", res);
+  }
+
+  // 读取文件
+  LOG_INFO("Attempting to read file...");
+  res = f_open(&SDFile, filePath, FA_READ);
+  if (res == FR_OK)
+  {
+    char buffer[256];
+    UINT bytesRead;
+    res = f_read(&SDFile, buffer, sizeof(buffer) - 1, &bytesRead);
+    buffer[bytesRead] = '\0'; // 确保字符串终止
+    if (res == FR_OK)
+    {
+      LOG_INFO("Data read from file:bytesRead = %d, %s", bytesRead, buffer);
+    }
+    else
+    {
+      LOG_ERROR("Failed to read file: %d", res);
+    }
+    f_close(&SDFile);
+  }
+}
 void start_task(void *arg)
 {
 
@@ -251,77 +323,9 @@ void start_task(void *arg)
 
   if (mountResult == FR_OK)
   {
-    FRESULT res;
-    UINT bytesWritten;
 
     show_sdcard_info();
-
-    // 创建文件
-    LOG_INFO("Attempting to create file...");
-
-    // 检查SD卡状态
-    HAL_SD_CardStateTypeDef cardState = HAL_SD_GetCardState(&hsd);
-    LOG_INFO("SD card state before file creation: %d", cardState);
-
-    char filePath[20];
-    sprintf(filePath, "%stest.txt", SDPath);
-    LOG_INFO("Opening file: %s", filePath);
-
-    res = f_open(&SDFile, filePath, FA_CREATE_ALWAYS | FA_WRITE);
-
-    if (res == FR_OK)
-    {
-      // 写入数据
-      LOG_INFO("File created successfully, preparing to write data...");
-      const char *data = "Hello from STM32F407 with FatFs!";
-      LOG_INFO("Data length: %d bytes", strlen(data));
-
-      // 添加超时机制
-      uint32_t writeStartTime = HAL_GetTick();
-      LOG_INFO("Starting write operation at tick: %lu", writeStartTime);
-
-      FRESULT r = f_write(&SDFile, data, strlen(data), &bytesWritten);
-
-      uint32_t writeEndTime = HAL_GetTick();
-      LOG_INFO("Write operation completed at tick: %lu, duration: %lu ms", writeEndTime, writeEndTime - writeStartTime);
-
-      if (r == FR_OK)
-      {
-        LOG_INFO("Data written successfully, bytes written: %d", bytesWritten);
-      }
-      else
-      {
-        LOG_ERROR("Failed to write data: %d", r);
-      }
-      // 关闭文件
-      LOG_INFO("Closing file...");
-      f_close(&SDFile);
-      LOG_INFO("File closed");
-    }
-    else
-    {
-      LOG_ERROR("Failed to create file: %d", res);
-    }
-
-    // 读取文件
-    LOG_INFO("Attempting to read file...");
-    res = f_open(&SDFile, filePath, FA_READ);
-    if (res == FR_OK)
-    {
-      char buffer[256];
-      UINT bytesRead;
-      res = f_read(&SDFile, buffer, sizeof(buffer) - 1, &bytesRead);
-      buffer[bytesRead] = '\0'; // 确保字符串终止
-      if (res == FR_OK)
-      {
-        LOG_INFO("Data read from file:bytesRead = %d, %s", bytesRead, buffer);
-      }
-      else
-      {
-        LOG_ERROR("Failed to read file: %d", res);
-      }
-      f_close(&SDFile);
-    }
+    test_sd_read_write();
   }
   else
   {
@@ -340,10 +344,14 @@ void start_task(void *arg)
 
 void process_task(void *arg)
 {
+  TickType_t xLastWakeTime = xTaskGetTickCount();
+  const TickType_t xPeriod = pdMS_TO_TICKS(1000);  // 1秒周期
+  
   while (1)
   {
     LOG_INFO("Task2 is running");
-    vTaskDelay(1000);
+    // 使用绝对延时：确保任务以精确的 1 秒周期执行
+    vTaskDelayUntil(&xLastWakeTime, xPeriod);
   }
 }
 
@@ -374,18 +382,26 @@ int main(void)
   /* USER CODE BEGIN SysInit */
 
   /* USER CODE END SysInit */
-
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_DMA_Init();
   MX_USART1_UART_Init();
   MX_SDIO_SD_Init();
   MX_FATFS_Init();
+  MX_RTC_Init();  // 初始化 RTC
   /* USER CODE BEGIN 2 */
 
   log_set_level(LOG_LEVEL_DEBUG);
+  
+  /* 打印RTC时钟源信息 */
+  if (RTC_GetClockSource() == 1) {
+    LOG_INFO("RTC clock source: LSE (32.768kHz)\r\n");
+  } else {
+    LOG_INFO("RTC clock source: LSI (~32kHz, less accurate)\r\n");
+  }
+  
   xTaskCreate(start_task, "Task1", 2048, NULL, 1, NULL);
-  // xTaskCreate(process_task, "Task2", 128, NULL, 1, NULL);
+  xTaskCreate(process_task, "Task2", 128, NULL, 1, NULL);
 
   /* USER CODE END 2 */
 

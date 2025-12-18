@@ -17,4 +17,7 @@ void MX_RTC_Init(void);
 /* 获取当前时间 */
 void RTC_GetCurrentTime(char* time_str, size_t buf_size);
 
+/* 获取RTC时钟源: 0=LSI, 1=LSE */
+uint8_t RTC_GetClockSource(void);
+
 #endif /* __RTC_H */
