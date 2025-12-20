@@ -19,14 +19,15 @@
  */
  
 #include "lvgl_demo.h"
-// #include "./BSP/LED/led.h"
 #include "FreeRTOS.h"
 #include "task.h"
 
 #include "lvgl.h"
 #include "lv_port_disp_template.h"
 #include "lv_port_indev_template.h"
-// #include "lv_demo_stress.h"
+#include "gui_guider.h"
+
+lv_ui guider_ui;
 
 
 /******************************************************************************************************/
@@ -117,14 +118,15 @@ void start_task(void *pvParameters)
 void lv_demo_task(void *pvParameters)
 {
     pvParameters = pvParameters;
-    
-    // lv_demo_stress();       /* 测试的demo */
-    lv_obj_t *obj = lv_obj_create(lv_scr_act());
-    lv_obj_set_style_bg_color(obj, lv_color_hex(0xff0000), 0);
-    lv_obj_set_style_bg_opa(obj, LV_OPA_COVER, 0);
-    lv_obj_set_size(obj, 200, 100);
-    lv_obj_center(obj);
 
+    // lv_demo_stress();       /* 测试的demo */
+    // lv_obj_t *obj = lv_obj_create(lv_scr_act());
+    // lv_obj_set_style_bg_color(obj, lv_color_hex(0xff0000), 0);
+    // lv_obj_set_style_bg_opa(obj, LV_OPA_COVER, 0);
+    // lv_obj_set_size(obj, 200, 100);
+    // lv_obj_center(obj);
+	setup_ui(&guider_ui);
+   	events_init(&guider_ui);
     
     while(1)
     {
