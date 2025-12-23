@@ -56,7 +56,7 @@
 #define LV_MEM_CUSTOM                       0
 #if LV_MEM_CUSTOM == 0
     /* `lv_mem_alloc()`可获得的内存大小(以字节为单位)(>= 2kB) */
-    #define LV_MEM_SIZE                     (46U * 1024U)          /*[字节]*/
+    #define LV_MEM_SIZE                     (60U * 1024U)          /*[字节]*/
 
     /* 为内存池设置一个地址，而不是将其作为普通数组分配。也可以在外部SRAM中。 */
     #define LV_MEM_ADR                      0     /*0: 未使用*/
@@ -709,7 +709,7 @@
 #define LV_USE_DEMO_BENCHMARK               0
 
 /* LVGL压力测试 */
-#define LV_USE_DEMO_STRESS                  1
+#define LV_USE_DEMO_STRESS                  0
 
 /* 音乐播放器的演示 */
 #define LV_USE_DEMO_MUSIC                   0

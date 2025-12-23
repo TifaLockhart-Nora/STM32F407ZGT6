@@ -614,16 +614,87 @@ void lcd_init(void)
     HAL_GPIO_Init(LCD_BL_GPIO_PORT, &gpio_init_struct); /* LCD_BL引脚模式设置(推挽输出) */
 
 
-    lcd_wr_regno(0x04);
-    lcddev.id = lcd_rd_data();      /* dummy read */
-    lcddev.id = lcd_rd_data();      /* ¶Áµ½0x85 */
-    lcddev.id = lcd_rd_data();      /* ¶ÁÈ¡0x85 */
+     /* ³¢ÊÔ9341 IDµÄ¶ÁÈ¡ */
+    lcd_wr_regno(0xD3);
+    lcddev.id = lcd_rd_data();  /* dummy read */
+    lcddev.id = lcd_rd_data();  /* ¶Áµ½0x00 */
+    lcddev.id = lcd_rd_data();  /* ¶ÁÈ¡93 */
     lcddev.id <<= 8;
-    lcddev.id |= lcd_rd_data();     /* ¶ÁÈ¡0x52 */
-    
-    if (lcddev.id == 0x8552)        /* ½«8552µÄID×ª»»³É7789 */
+    lcddev.id |= lcd_rd_data(); /* ¶ÁÈ¡41 */
+
+    if (lcddev.id != 0x9341)    /* ²»ÊÇ 9341 , ³¢ÊÔ¿´¿´ÊÇ²»ÊÇ ST7789 */
     {
-        lcddev.id = 0x7789;
+        lcd_wr_regno(0x04);
+        lcddev.id = lcd_rd_data();      /* dummy read */
+        lcddev.id = lcd_rd_data();      /* ¶Áµ½0x85 */
+        lcddev.id = lcd_rd_data();      /* ¶ÁÈ¡0x85 */
+        lcddev.id <<= 8;
+        lcddev.id |= lcd_rd_data();     /* ¶ÁÈ¡0x52 */
+        
+        if (lcddev.id == 0x8552)        /* ½«8552µÄID×ª»»³É7789 */
+        {
+            lcddev.id = 0x7789;
+        }
+
+        if (lcddev.id != 0x7789)        /* Ò²²»ÊÇST7789, ³¢ÊÔÊÇ²»ÊÇ NT35310 */
+        {
+            lcd_wr_regno(0xD4);
+            lcddev.id = lcd_rd_data();  /* dummy read */
+            lcddev.id = lcd_rd_data();  /* ¶Á»Ø0x01 */
+            lcddev.id = lcd_rd_data();  /* ¶Á»Ø0x53 */
+            lcddev.id <<= 8;
+            lcddev.id |= lcd_rd_data(); /* ÕâÀï¶Á»Ø0x10 */
+
+            if (lcddev.id != 0x5310)    /* Ò²²»ÊÇNT35310,³¢ÊÔ¿´¿´ÊÇ²»ÊÇST7796 */
+            {
+                lcd_wr_regno(0XD3);
+                lcddev.id = lcd_rd_data();  /* dummy read */
+                lcddev.id = lcd_rd_data();  /* ¶Áµ½0X00 */
+                lcddev.id = lcd_rd_data();  /* ¶ÁÈ¡0X77 */
+                lcddev.id <<= 8;
+                lcddev.id |= lcd_rd_data(); /* ¶ÁÈ¡0X96 */
+                
+                if (lcddev.id != 0x7796)    /* Ò²²»ÊÇST7796,³¢ÊÔ¿´¿´ÊÇ²»ÊÇNT35510 */
+                {
+                    /* ·¢ËÍÃÜÔ¿£¨³§¼ÒÌá¹©£© */
+                    lcd_write_reg(0xF000, 0x0055);
+                    lcd_write_reg(0xF001, 0x00AA);
+                    lcd_write_reg(0xF002, 0x0052);
+                    lcd_write_reg(0xF003, 0x0008);
+                    lcd_write_reg(0xF004, 0x0001);
+                    
+                    lcd_wr_regno(0xC500);       /* ¶ÁÈ¡IDµÍ°ËÎ» */
+                    lcddev.id = lcd_rd_data();  /* ¶Á»Ø0x80 */
+                    lcddev.id <<= 8;
+
+                    lcd_wr_regno(0xC501);       /* ¶ÁÈ¡ID¸ß°ËÎ» */
+                    lcddev.id |= lcd_rd_data(); /* ¶Á»Ø0x00 */
+                    
+                    HAL_Delay(5);                /* µÈ´ý5ms, ÒòÎª0XC501Ö¸Áî¶Ô1963À´Ëµ¾ÍÊÇÈí¼þ¸´Î»Ö¸Áî, µÈ´ý5msÈÃ1963¸´Î»Íê³ÉÔÙ²Ù×÷ */
+                    
+                    if (lcddev.id != 0x5510)    /* Ò²²»ÊÇNT5510,³¢ÊÔ¿´¿´ÊÇ²»ÊÇILI9806 */
+                    {
+                        lcd_wr_regno(0XD3);
+                        lcddev.id = lcd_rd_data();  /* dummy read */
+                        lcddev.id = lcd_rd_data();  /* ¶Á»Ø0X00 */
+                        lcddev.id = lcd_rd_data();  /* ¶Á»Ø0X98 */
+                        lcddev.id <<= 8;
+                        lcddev.id |= lcd_rd_data(); /* ¶Á»Ø0X06 */
+                        
+                        if (lcddev.id != 0x9806)    /* Ò²²»ÊÇILI9806,³¢ÊÔ¿´¿´ÊÇ²»ÊÇSSD1963 */
+                        {
+                            lcd_wr_regno(0xA1);
+                            lcddev.id = lcd_rd_data();
+                            lcddev.id = lcd_rd_data();  /* ¶Á»Ø0x57 */
+                            lcddev.id <<= 8;
+                            lcddev.id |= lcd_rd_data(); /* ¶Á»Ø0x61 */
+
+                            if (lcddev.id == 0x5761) lcddev.id = 0x1963; /* SSD1963¶Á»ØµÄIDÊÇ5761H,Îª·½±ãÇø·Ö,ÎÒÃÇÇ¿ÖÆÉèÖÃÎª1963 */
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /* 特别注意, 如果在main函数里面屏蔽串口1初始化, 则会卡死在printf
@@ -634,14 +705,35 @@ void lcd_init(void)
 
     if (lcddev.id == 0x7789)
     {
-        extern void lcd_ex_st7789_reginit(void);
-        lcd_ex_st7789_reginit(); /* 执行ST7789初始化 */
+        lcd_ex_st7789_reginit();    /* Ö´ÐÐST7789³õÊ¼»¯ */
+    }
+    else if (lcddev.id == 0x9806)
+    {
+        lcd_ex_ili9806_reginit();   /* Ö´ÐÐILI9806³õÊ¼»¯ */
+    }
+
+    FSMC_NORSRAM_TimingTypeDef fsmc_write_handle = {0};
+    extern SRAM_HandleTypeDef hsram1;
+        /* ³õÊ¼»¯Íê³ÉÒÔºó,ÌáËÙ */
+    if (lcddev.id == 0x7789 || lcddev.id == 0x9341 || lcddev.id == 0x1963)  /* 7789/9341/1963 ÌáËÙ */
+    {
+        /* ÖØÐÂÅäÖÃÐ´Ê±Ðò¿ØÖÆ¼Ä´æÆ÷µÄÊ±Ðò */
+        fsmc_write_handle.AddressSetupTime = 3; /* µØÖ·½¨Á¢Ê±¼ä(ADDSET)Îª3¸öfsmc_ker_ck=6*3=18ns */
+        fsmc_write_handle.DataSetupTime = 3;    /* Êý¾Ý±£³ÖÊ±¼ä(DATAST)Îª3¸öfsmc_ker_ck=6*3=18ns */
+        FSMC_NORSRAM_Extended_Timing_Init(hsram1.Extended, &fsmc_write_handle, hsram1.Init.NSBank, hsram1.Init.ExtendedMode);
+    }
+    else if (lcddev.id == 0x5310 || lcddev.id == 0x7796 || lcddev.id == 0x5510 || lcddev.id == 0x9806)  /* Èç¹ûÊÇÕâ¼¸¸öIC, ÔòÉèÖÃWRÊ±ÐòÎª×î¿ì */
+    {
+        /* ÖØÐÂÅäÖÃÐ´Ê±Ðò¿ØÖÆ¼Ä´æÆ÷µÄÊ±Ðò */
+        fsmc_write_handle.AddressSetupTime = 2; /* µØÖ·½¨Á¢Ê±¼ä(ADDSET)Îª2¸öfsmc_ker_ck=6*2=12ns */
+        fsmc_write_handle.DataSetupTime = 2;    /* Êý¾Ý±£³ÖÊ±¼ä(DATAST)Îª2¸öfsmc_ker_ck=6*2=12ns */
+        FSMC_NORSRAM_Extended_Timing_Init(hsram1.Extended, &fsmc_write_handle, hsram1.Init.NSBank, hsram1.Init.ExtendedMode);
     }
 
 
     lcd_display_dir(0); /* 默认为竖屏 */
     LCD_BL(1);          /* 点亮背光 */
-    lcd_clear(BLUE);
+    // lcd_clear(BLUE);
 }
 
 /**
@@ -1108,4 +1200,25 @@ void lcd_show_string(uint16_t x, uint16_t y, uint16_t width, uint16_t height, ui
         x += size / 2;
         p++;
     }
+}
+
+
+
+static uint8_t dwt_inited = 0;
+
+void delay_us_init(void)
+{
+    CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;   // 使能 DWT
+    DWT->CYCCNT = 0;
+    DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+    dwt_inited = 1;
+}
+
+void delay_us(uint32_t us)
+{
+    if (!dwt_inited) delay_us_init();
+
+    const uint32_t cycles = (SystemCoreClock / 1000000U) * us;
+    const uint32_t start = DWT->CYCCNT;
+    while ((DWT->CYCCNT - start) < cycles) { __NOP(); }
 }

@@ -13,8 +13,8 @@
 #include "lvgl.h"
 
 /* 导入驱动头文件 */
-// #include "./BSP/TOUCH/touch.h"
-// #include "./BSP/LCD/lcd.h"
+#include "touch.h"
+#include "lcd.h"
 // #include "./BSP/KEY/key.h"
 
 /*********************

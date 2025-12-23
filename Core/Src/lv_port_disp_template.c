@@ -22,8 +22,8 @@
 // #include "./MALLOC/malloc.h"
 #endif
 
-#define MY_DISP_HOR_RES (240)   /* 屏幕宽度 */
-#define MY_DISP_VER_RES (320)   /* 屏幕高度 */
+#define MY_DISP_HOR_RES (800)   /* 屏幕宽度 */
+#define MY_DISP_VER_RES (480)   /* 屏幕高度 */
 
 /**********************
  *      TYPEDEFS
@@ -69,7 +69,8 @@ void lcd_draw_fast_rgb_color(int16_t sx, int16_t sy,int16_t ex, int16_t ey, uint
 
     for(uint32_t i = 0; i < draw_size; i++)
     {
-        lcd_wr_data(color[i]);
+        // lcd_wr_data(color[i]);
+        LCD->LCD_RAM = color[i];
     }
 }
 
@@ -115,8 +116,10 @@ void lv_port_disp_init(void)
     static lv_color_t buf_1 = mymalloc(SRAMEX, MY_DISP_HOR_RES * MY_DISP_VER_RES);              /* 设置缓冲区的大小为屏幕的全尺寸大小 */
     lv_disp_draw_buf_init(&draw_buf_dsc_1, buf_1, NULL, MY_DISP_HOR_RES * MY_DISP_VER_RES);     /* 初始化显示缓冲区 */
 #else
-    static lv_color_t buf_1[MY_DISP_HOR_RES * 10];                                              /* 设置缓冲区的大小为 10 行屏幕的大小 */
-    lv_disp_draw_buf_init(&draw_buf_dsc_1, buf_1, NULL, MY_DISP_HOR_RES * 10);                  /* 初始化显示缓冲区 */
+    // static lv_color_t buf_1[MY_DISP_HOR_RES * 10];                                              /* 设置缓冲区的大小为 10 行屏幕的大小 */
+    // lv_disp_draw_buf_init(&draw_buf_dsc_1, buf_1, NULL, MY_DISP_HOR_RES * 10);                  /* 初始化显示缓冲区 */
+    __attribute__((section(".ccmram"))) static lv_color_t buf_1[MY_DISP_HOR_RES * 40];
+    lv_disp_draw_buf_init(&draw_buf_dsc_1, buf_1, NULL, MY_DISP_HOR_RES * 40); /* 初始化显示缓冲区 */
 #endif
 
     /* 双缓冲区示例) */
@@ -177,7 +180,7 @@ static void disp_init(void)
 {
     /*You code here*/
     lcd_init();         /* 初始化LCD */
-    lcd_display_dir(0); /* 设置横屏 */
+    lcd_display_dir(1); /* 设置横屏 */
 }
 
 /**

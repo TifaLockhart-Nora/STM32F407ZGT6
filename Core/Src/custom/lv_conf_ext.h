@@ -1,25 +1,19 @@
-/*
-* Copyright 2023 NXP
-* NXP Proprietary. This software is owned or controlled by NXP and may only be used strictly in
-* accordance with the applicable license terms. By expressly accepting such terms or by downloading, installing,
-* activating and/or otherwise using the software, you are agreeing that you have read, and that you agree to
-* comply with and are bound by, such license terms.  If you do not agree to be bound by the applicable license
-* terms, then you may not retain, install, activate or otherwise use the software.
-*/
-
+// SPDX-License-Identifier: MIT
+// Copyright 2023 NXP
 /*
  * lv_conf_ext.h for custom lvconf file.
  * Created on: Feb 8, 2023
- * example :
+ * example : 
  *	#undef LV_FONT_FMT_TXT_LARGE
  *  #define LV_FONT_FMT_TXT_LARGE 1
  */
-
+ 
 #ifndef LV_CONF_EXT_H
 #define LV_CONF_EXT_H
 
 
 /* common code  begin  */
+#define WIDTH_REFER(n) (n * LV_HOR_RES / 480)
 
 
 /* common code end */

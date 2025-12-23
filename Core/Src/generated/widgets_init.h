@@ -23,6 +23,9 @@ void clock_count(int *hour, int *min, int *sec);
 #endif
 
 
+void WidgetsDemo_datetext_Birthday_event_handler(lv_event_t *e);
+void WidgetsDemo_datetext_Birthday_calendar_event_handler(lv_event_t *e);
+void WidgetsDemo_datetext_Birthday_init_calendar(lv_obj_t *obj, char * s);
 
 #ifdef __cplusplus
 }
