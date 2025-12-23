@@ -23,6 +23,7 @@
 #include "stm32f4xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "dma.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -248,6 +249,14 @@ void DMA2_Stream6_IRQHandler(void)
 }
 
 /* USER CODE BEGIN 1 */
+
+/**
+  * @brief This function handles DMA2 stream0 global interrupt (LCD DMA).
+  */
+void DMA2_Stream0_IRQHandler(void)
+{
+    HAL_DMA_IRQHandler(&hdma_lcd);
+}
 
 /* USER CODE END 1 */
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

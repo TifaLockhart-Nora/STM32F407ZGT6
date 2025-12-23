@@ -52,7 +52,7 @@ void MX_FSMC_Init(void)
   hsram1.Init.AsynchronousWait = FSMC_ASYNCHRONOUS_WAIT_DISABLE;
   hsram1.Init.WriteBurst = FSMC_WRITE_BURST_DISABLE;
   hsram1.Init.PageSize = FSMC_PAGE_SIZE_NONE;
-  /* Timing */
+  /* Timing - LCD 读时序 */
   Timing.AddressSetupTime = 15;
   Timing.AddressHoldTime = 15;
   Timing.DataSetupTime = 60;
@@ -60,10 +60,10 @@ void MX_FSMC_Init(void)
   // Timing.CLKDivision = 16;
   // Timing.DataLatency = 17;
   Timing.AccessMode = FSMC_ACCESS_MODE_A;
-  /* ExtTiming */
-  ExtTiming.AddressSetupTime = 9;
+  /* ExtTiming - LCD 写时序 (优化后更快) */
+  ExtTiming.AddressSetupTime = 5;           /* 减少地址建立时间 */
   ExtTiming.AddressHoldTime = 15;
-  ExtTiming.DataSetupTime = 9;
+  ExtTiming.DataSetupTime = 5;              /* 减少数据建立时间 */
   ExtTiming.BusTurnAroundDuration = 0;
   // ExtTiming.CLKDivision = 16;
   // ExtTiming.DataLatency = 17;

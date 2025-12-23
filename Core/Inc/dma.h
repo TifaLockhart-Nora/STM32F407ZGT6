@@ -30,17 +30,18 @@
 /* DMA memory to memory transfer handles -------------------------------------*/
 
 /* USER CODE BEGIN Includes */
-
+#include "stm32f4xx_hal.h"
 /* USER CODE END Includes */
 
 /* USER CODE BEGIN Private defines */
-
+/* LCD DMA 传输句柄 */
+extern DMA_HandleTypeDef hdma_lcd;
 /* USER CODE END Private defines */
 
 void MX_DMA_Init(void);
 
 /* USER CODE BEGIN Prototypes */
-
+void LCD_DMA_Init(void);
 /* USER CODE END Prototypes */
 
 #ifdef __cplusplus

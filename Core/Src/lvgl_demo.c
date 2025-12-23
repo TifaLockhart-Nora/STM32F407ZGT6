@@ -44,18 +44,11 @@ void start_task(void *pvParameters);    /* 任务函数 */
 /* LV_DEMO_TASK 任务 配置
  * 包括: 任务句柄 任务优先级 堆栈大小 创建任务
  */
-#define LV_DEMO_TASK_PRIO   3           /* 任务优先级 */
+#define LV_DEMO_TASK_PRIO   4           /* 任务优先级 (提高优先级以减少卡顿) */
 #define LV_DEMO_STK_SIZE    1024        /* 任务堆栈大小 */
 TaskHandle_t LV_DEMOTask_Handler;       /* 任务句柄 */
 void lv_demo_task(void *pvParameters);  /* 任务函数 */
 
-/* LED_TASK 任务 配置
- * 包括: 任务句柄 任务优先级 堆栈大小 创建任务
- */
-#define LED_TASK_PRIO       4           /* 任务优先级 */
-#define LED_STK_SIZE        128         /* 任务堆栈大小 */
-TaskHandle_t LEDTask_Handler;           /* 任务句柄 */
-void led_task(void *pvParameters);      /* 任务函数 */
 /******************************************************************************************************/
 
 /**
@@ -97,14 +90,6 @@ void start_task(void *pvParameters)
                 (void*          )NULL,
                 (UBaseType_t    )LV_DEMO_TASK_PRIO,
                 (TaskHandle_t*  )&LV_DEMOTask_Handler);
-
-    /* LED测试任务 */
-    // xTaskCreate((TaskFunction_t )led_task,
-    //             (const char*    )"led_task",
-    //             (uint16_t       )LED_STK_SIZE,
-    //             (void*          )NULL,
-    //             (UBaseType_t    )LED_TASK_PRIO,
-    //             (TaskHandle_t*  )&LEDTask_Handler);
 
     taskEXIT_CRITICAL();            /* 退出临界区 */
     vTaskDelete(StartTask_Handler); /* 删除开始任务 */

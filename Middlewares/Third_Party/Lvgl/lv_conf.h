@@ -56,10 +56,10 @@
 #define LV_MEM_CUSTOM                       0
 #if LV_MEM_CUSTOM == 0
     /* `lv_mem_alloc()`可获得的内存大小(以字节为单位)(>= 2kB) */
-    #define LV_MEM_SIZE                     (60U * 1024U)          /*[字节]*/
+    #define LV_MEM_SIZE                     (60U * 1024U)          /*[字节] 减小到32KB以节省内部SRAM*/
 
     /* 为内存池设置一个地址，而不是将其作为普通数组分配。也可以在外部SRAM中。 */
-    #define LV_MEM_ADR                      0x68000000     /*0: 未使用*/
+    #define LV_MEM_ADR                      0     /*0: 使用内部SRAM，DMA可访问*/
     /* 给内存分配器而不是地址，它将被调用来获得LVGL的内存池。例如my_malloc */
     #if LV_MEM_ADR == 0
         //#define LV_MEM_POOL_INCLUDE your_alloc_library  /* 如果使用外部分配器，取消注释 */
@@ -77,8 +77,8 @@
  * 如果没有足够的缓冲区，你会看到一个错误日志信息. */
 #define LV_MEM_BUF_MAX_NUM                  16
 
-/* 使用标准的 `memcpy` 和 `memset` 代替LVGL自己的函数。(可能更快，也可能不会更快) */
-#define LV_MEMCPY_MEMSET_STD                0
+/* 使用标准的 `memcpy` 和 `memset` 代替LVGL自己的函数。(通常更快) */
+#define LV_MEMCPY_MEMSET_STD                1
 
 
 
@@ -255,8 +255,8 @@
  * 5. 其他
  *-----------*/
 
-/* 1:显示CPU使用率和FPS */
-#define LV_USE_PERF_MONITOR                 0
+/* 1:显示CPU使用率和FPS (调试用) */
+#define LV_USE_PERF_MONITOR                 1
 #if LV_USE_PERF_MONITOR
     #define LV_USE_PERF_MONITOR_POS LV_ALIGN_BOTTOM_RIGHT
 #endif
@@ -641,7 +641,7 @@
 #define LV_USE_GIF                          0
 
 /* QR译码器库 */
-#define LV_USE_QRCODE                       0
+#define LV_USE_QRCODE                       01
 
 /* FreeType库 */
 #define LV_USE_FREETYPE                     0

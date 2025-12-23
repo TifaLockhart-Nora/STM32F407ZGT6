@@ -457,6 +457,7 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_DMA_Init();
+  LCD_DMA_Init();  /* 初始化LCD DMA传输 */
   MX_USART1_UART_Init();
   MX_SDIO_SD_Init();
   MX_FATFS_Init();

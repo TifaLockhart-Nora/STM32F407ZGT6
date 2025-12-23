@@ -12,7 +12,7 @@
 #include <stdio.h>
 #include "lvgl.h"
 #include "custom.h"
-
+#include "lv_conf_ext.h"
 /*********************
  *      DEFINES
  *********************/
