@@ -64,6 +64,7 @@ MEMORY
 RAM (xrw)      : ORIGIN = 0x20000000, LENGTH = 128K
 CCMRAM (xrw)      : ORIGIN = 0x10000000, LENGTH = 64K
 FLASH (rx)      : ORIGIN = 0x8000000, LENGTH = 1024K
+EXTSRAM (xrw)  : ORIGIN = 0x68000000, LENGTH = 1024K
 }
 
 /* Define output sections */
@@ -193,6 +194,15 @@ SECTIONS
     . = ALIGN(8);
   } >RAM
 
+  .__extsram :
+  {
+    . = ALIGN(64);
+    _sextsram = .;
+    *(.__extsram)
+    *(.__extsram*)
+    . = ALIGN(4);
+    _eextsram = .;
+  } >EXTSRAM
   
 
   /* Remove information from the standard libraries */

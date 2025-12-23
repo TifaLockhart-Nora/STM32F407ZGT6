@@ -59,7 +59,7 @@
     #define LV_MEM_SIZE                     (60U * 1024U)          /*[字节]*/
 
     /* 为内存池设置一个地址，而不是将其作为普通数组分配。也可以在外部SRAM中。 */
-    #define LV_MEM_ADR                      0     /*0: 未使用*/
+    #define LV_MEM_ADR                      0x68000000     /*0: 未使用*/
     /* 给内存分配器而不是地址，它将被调用来获得LVGL的内存池。例如my_malloc */
     #if LV_MEM_ADR == 0
         //#define LV_MEM_POOL_INCLUDE your_alloc_library  /* 如果使用外部分配器，取消注释 */

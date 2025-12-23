@@ -733,7 +733,7 @@ void lcd_init(void)
 
     lcd_display_dir(0); /* 默认为竖屏 */
     LCD_BL(1);          /* 点亮背光 */
-    // lcd_clear(BLUE);
+    lcd_clear(WHITE);
 }
 
 /**
