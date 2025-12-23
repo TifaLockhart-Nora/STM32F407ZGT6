@@ -22,6 +22,7 @@
 #include "cmsis_os.h"
 #include "dma.h"
 #include "fatfs.h"
+#include "i2c.h"
 #include "sdio.h"
 #include "usart.h"
 #include "usb_device.h"
@@ -37,6 +38,8 @@
 #include "lcd.h"
 #include "lvgl.h"
 #include "lvgl_demo.h"
+#include "sram.h"
+#include "malloc.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -74,7 +77,7 @@ HAL_StatusTypeDef SD_Init(void)
 {
   HAL_StatusTypeDef status;
 
-  // 初始化SD�????
+  // 初始化SD�???????
   LOG_INFO("Initializing SD card...");
 
   // 禁用SDIO外设
@@ -86,7 +89,7 @@ HAL_StatusTypeDef SD_Init(void)
   osDelay(10);
 
   // 使用较低的时钟频率进行初始化
-  hsd.Init.ClockDiv = 118; // �????400kHz，符合SD卡初始化规范
+  hsd.Init.ClockDiv = 118; // �???????400kHz，符合SD卡初始化规范
   LOG_INFO("Setting SDIO clock to low speed (ClockDiv=%d)", hsd.Init.ClockDiv);
 
   status = HAL_SD_Init(&hsd);
@@ -94,9 +97,9 @@ HAL_StatusTypeDef SD_Init(void)
   {
     LOG_ERROR("SD card initialization failed with status: %d", status);
 
-    // 尝试使用更保守的设置再次初始�????
+    // 尝试使用更保守的设置再次初始�???????
     LOG_INFO("Attempting with more conservative settings...");
-    hsd.Init.ClockDiv = 178; // 更低的时钟频�????
+    hsd.Init.ClockDiv = 178; // 更低的时钟频�???????
     status = HAL_SD_Init(&hsd);
     if (status != HAL_OK)
     {
@@ -106,28 +109,28 @@ HAL_StatusTypeDef SD_Init(void)
   }
   LOG_INFO("SD card initialized successfully at low speed");
 
-  // 等待SD卡稳�????
+  // 等待SD卡稳�???????
   osDelay(100); // 等待100ms
 
   // 逐步提高时钟频率
   LOG_INFO("Increasing SDIO clock frequency to medium speed...");
   __HAL_SD_DISABLE(&hsd);
-  hsd.Init.ClockDiv = 10; // �????4MHz
+  hsd.Init.ClockDiv = 10; // �???????4MHz
   status = HAL_SD_Init(&hsd);
   if (status != HAL_OK)
   {
     LOG_ERROR("Failed to increase SDIO clock frequency to medium speed, status: %d", status);
-    // 继续使用较低的时钟频�????
+    // 继续使用较低的时钟频�???????
   }
   else
   {
     LOG_INFO("SDIO clock frequency increased to medium speed successfully");
     osDelay(50); // 等待50ms
 
-    // 尝试进一步提高时钟频�????
+    // 尝试进一步提高时钟频�???????
     LOG_INFO("Increasing SDIO clock frequency to high speed...");
     __HAL_SD_DISABLE(&hsd);
-    hsd.Init.ClockDiv = 1; // �????16MHz
+    hsd.Init.ClockDiv = 1; // �???????16MHz
     status = HAL_SD_Init(&hsd);
     if (status != HAL_OK)
     {
@@ -170,7 +173,7 @@ HAL_StatusTypeDef SD_Init(void)
 
 void show_sdcard_info(void)
 {
-  // �????查SD卡状�????
+  // �???????查SD卡状�???????
   HAL_SD_CardInfoTypeDef cardInfo;
   if (HAL_SD_GetCardInfo(&hsd, &cardInfo) != HAL_OK)
   {
@@ -184,11 +187,11 @@ void show_sdcard_info(void)
     LOG_INFO("  BlockNbr: %lu", (unsigned long)cardInfo.BlockNbr);
     LOG_INFO("  BlockSize: %lu", (unsigned long)cardInfo.BlockSize);
     LOG_INFO("  LogBlockNbr: %lu", (unsigned long)cardInfo.LogBlockNbr);
-    LOG_INFO("  LogBlockSize: %lu", (unsigned long)cardInfo.LogBlockSize); // 计算SD卡�?�容�???? (BlockNbr * BlockSize)
+    LOG_INFO("  LogBlockSize: %lu", (unsigned long)cardInfo.LogBlockSize); // 计算SD卡�?�容�??????? (BlockNbr * BlockSize)
     uint64_t totalBytes = (uint64_t)cardInfo.BlockNbr * cardInfo.BlockSize;
     uint32_t totalMB = (uint32_t)(totalBytes / (1024 * 1024));
     uint32_t totalGB_int = totalMB / 1024;
-    uint32_t totalGB_frac = (totalMB % 1024) * 100 / 1024; // 小数部分，保�????2�????    LOG_INFO("  Total Capacity: %lu MB (%lu.%02lu GB)", totalMB, totalGB_int, totalGB_frac);
+    uint32_t totalGB_frac = (totalMB % 1024) * 100 / 1024; // 小数部分，保�???????2�???????    LOG_INFO("  Total Capacity: %lu MB (%lu.%02lu GB)", totalMB, totalGB_int, totalGB_frac);
 
     // 浮点打印测试
     float totalGB_float = (float)totalMB / 1024.0f;
@@ -201,15 +204,15 @@ void show_sdcard_info(void)
   FATFS *fs;
   DWORD fre_clust, fre_sect, tot_sect;
 
-  // 获取卷信息和空闲簇数�????
+  // 获取卷信息和空闲簇数�???????
   FRESULT res = f_getfree(SDPath, &fre_clust, &fs);
   if (res == FR_OK)
   {
     // 计算总扇区数和空闲扇区数
     tot_sect = (fs->n_fatent - 2) * fs->csize; // 总扇区数
-    fre_sect = fre_clust * fs->csize;          // 空闲扇区�????
+    fre_sect = fre_clust * fs->csize;          // 空闲扇区�???????
 
-    // 转换�???? MB (扇区大小通常�???? 512 字节)
+    // 转换�??????? MB (扇区大小通常�??????? 512 字节)
     uint32_t totalMB = tot_sect / 2048; // tot_sect * 512 / 1024 / 1024
     uint32_t freeMB = fre_sect / 2048;  // fre_sect * 512 / 1024 / 1024
     uint32_t usedMB = totalMB - freeMB;
@@ -218,7 +221,7 @@ void show_sdcard_info(void)
     LOG_INFO("  Used:  %lu MB", usedMB);
     LOG_INFO("  Free:  %lu MB", freeMB);
     uint32_t usagePercent = usedMB * 100 / totalMB;
-    uint32_t usageFrac = (usedMB * 1000 / totalMB) % 10; // 小数点后�????�????
+    uint32_t usageFrac = (usedMB * 1000 / totalMB) % 10; // 小数点后�???????�???????
     LOG_INFO("  Usage: %lu.%lu%%", usagePercent, usageFrac);
   }
   else
@@ -234,7 +237,7 @@ void test_sd_read_write(void)
   // 创建文件
   LOG_INFO("Attempting to create file...");
 
-  // �????查SD卡状�????
+  // �???????查SD卡状�???????
   HAL_SD_CardStateTypeDef cardState = HAL_SD_GetCardState(&hsd);
   LOG_INFO("SD card state before file creation: %d", cardState);
 
@@ -286,7 +289,7 @@ void test_sd_read_write(void)
     char buffer[256];
     UINT bytesRead;
     res = f_read(&SDFile, buffer, sizeof(buffer) - 1, &bytesRead);
-    buffer[bytesRead] = '\0'; // 确保字符串终�????
+    buffer[bytesRead] = '\0'; // 确保字符串终�???????
     if (res == FR_OK)
     {
       LOG_INFO("Data read from file:bytesRead = %d, %s", bytesRead, buffer);
@@ -348,12 +351,12 @@ static void start_task(void *arg)
 void process_task(void *arg)
 {
   TickType_t xLastWakeTime = xTaskGetTickCount();
-  const TickType_t xPeriod = pdMS_TO_TICKS(1000); // 1秒周�????
+  const TickType_t xPeriod = pdMS_TO_TICKS(1000); // 1秒周�???????
 
   while (1)
   {
     LOG_INFO("Task2 is running");
-    // 使用绝对延时：确保任务以精确�???? 1 秒周期执�????
+    // 使用绝对延时：确保任务以精确�??????? 1 秒周期执�???????
     vTaskDelayUntil(&xLastWakeTime, xPeriod);
   }
 }
@@ -393,11 +396,81 @@ int main(void)
   MX_SDIO_SD_Init();
   MX_FATFS_Init();
   MX_FSMC_Init();
+  // MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
-  MX_RTC_Init();
+  MX_RTC_Init();  
   log_set_level(LOG_LEVEL_DEBUG);
-  // lcd_init();
-  /* 打印RTC时钟源信�???? */
+  
+  /* 使用正点原子�? SRAM 初始化函数重新配�? FSMC BANK3 */
+  // sram_init();
+  
+  // /* 测试外部 SRAM 读写 */
+  // {
+  //   volatile uint16_t *sram_test = (volatile uint16_t *)0x68000000;
+  //   uint8_t sram_ok = 1;
+  //   uint16_t read_val;
+    
+  //   LOG_INFO("Testing External SRAM at 0x68000000...\r\n");
+    
+  //   /* 测试1: �?单的单字写读 */
+  //   sram_test[0] = 0x1234;
+  //   read_val = sram_test[0];
+  //   LOG_INFO("Single word test: wrote 0x1234, read 0x%04X\r\n", read_val);
+  //   if(read_val != 0x1234) {
+  //     LOG_ERROR("Single word test FAILED!\r\n");
+  //     sram_ok = 0;
+  //   }
+    
+  //   /* 测试2: 另一个地�? */
+  //   sram_test[100] = 0xABCD;
+  //   read_val = sram_test[100];
+  //   LOG_INFO("Offset test: wrote 0xABCD at [100], read 0x%04X\r\n", read_val);
+  //   if(read_val != 0xABCD) {
+  //     LOG_ERROR("Offset test FAILED!\r\n");
+  //     sram_ok = 0;
+  //   }
+  //     /* 测试3: 连续写读 - 每写�?个立即验�? */
+  //   if(sram_ok) {
+  //     for(int i = 0; i < 100; i++) {
+  //       sram_test[i] = (uint16_t)(0x5A00 + i);
+  //       __DSB();  /* 数据同步屏障，确保写入完�? */
+  //       read_val = sram_test[i];
+  //       LOG_INFO("Wrote 0x%04X, read 0x%04X at index %d\r\n", (0x5A00 + i), read_val, i);
+  //       if(read_val != (uint16_t)(0x5A00 + i)) {
+  //         LOG_ERROR("Write-verify failed at %d: wrote 0x%04X, read 0x%04X\r\n", 
+  //                   i, (0x5A00 + i), read_val);
+  //         sram_ok = 0;
+  //         break;
+  //       }
+  //     }
+      
+  //     /* 再次全部读取验证 */
+  //     if(sram_ok) {
+  //       __DSB();
+  //       for(int i = 0; i < 100; i++) {
+  //         read_val = sram_test[i];
+  //         LOG_INFO("Re-read 0x%04X test 0x%04X at index %d\r\n", read_val, (0x5A00 + i), i);
+  //         if(read_val != (uint16_t)(0x5A00 + i)) {
+  //           LOG_ERROR("Re-read failed at %d: expected 0x%04X, read 0x%04X\r\n", 
+  //                     i, (0x5A00 + i), read_val);
+  //           sram_ok = 0;
+  //           break;
+  //         }
+  //       }
+  //     }
+  //   }
+    
+  //   if(sram_ok) {
+  //     LOG_INFO("External SRAM test PASSED!\r\n");
+  //   } else {
+  //     LOG_ERROR("External SRAM test FAILED! Check hardware connection.\r\n");
+  //     /* 不再死循环，继续运行看看其他问题 */
+  //   }
+  // }
+  
+  // my_mem_init(SRAMIN);                  /* 初始化内部SRAM内存�? */
+  my_mem_init(SRAMEX);                  /* 初始化外部SRAM内存�? - LVGL缓冲区需�? */
+  /* 打印RTC时钟源信�??????? */
   if (RTC_GetClockSource() == 1)
   {
     LOG_INFO("RTC clock source: LSE (32.768kHz)\r\n");
@@ -411,14 +484,13 @@ int main(void)
   // lcd_show_string(10, 47, 220, 24, 24, "Timer", RED);
   // lcd_show_string(10, 76, 220, 16, 16, "ATOM@ALIENTEK", RED);
   // xTaskCreate(start_task, "Task1", 2048, NULL, 1, NULL);
-  // xTaskCreate(process_task, "Task2", 128, NULL, 1, NULL);
+  xTaskCreate(process_task, "Task2", 128, NULL, 1, NULL);
   lvgl_demo();
   /* USER CODE END 2 */
 
   /* Init scheduler */
   osKernelInitialize();  /* Call init function for freertos objects (in freertos.c) */
   MX_FREERTOS_Init();
-  
   /* Start scheduler */
   osKernelStart();
 

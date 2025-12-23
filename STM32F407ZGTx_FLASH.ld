@@ -62,8 +62,9 @@ _Min_Stack_Size = 0x1000; /* required amount of stack */
 MEMORY
 {
 RAM (xrw)      : ORIGIN = 0x20000000, LENGTH = 128K
-CCMRAM (xrw)      : ORIGIN = 0x10000000, LENGTH = 64K
-FLASH (rx)      : ORIGIN = 0x8000000, LENGTH = 1024K
+CCMRAM (xrw)   : ORIGIN = 0x10000000, LENGTH = 64K
+FLASH (rx)     : ORIGIN = 0x8000000, LENGTH = 1024K
+EXTSRAM (xrw)  : ORIGIN = 0x68000000, LENGTH = 1024K
 }
 
 /* Define output sections */
@@ -181,7 +182,6 @@ SECTIONS
     _ebss = .;         /* define a global symbol at bss end */
     __bss_end__ = _ebss;
   } >RAM
-
   /* User_heap_stack section, used to check that there is enough RAM left */
   ._user_heap_stack :
   {
@@ -193,7 +193,16 @@ SECTIONS
     . = ALIGN(8);
   } >RAM
 
-  
+  /* External SRAM section (NOLOAD = uninitialized, no flash copy needed) */
+  .__extsram :
+  {
+    . = ALIGN(64);
+    _sextsram = .;
+    *(.__extsram)
+    *(.__extsram*)
+    . = ALIGN(4);
+    _eextsram = .;
+  } >EXTSRAM
 
   /* Remove information from the standard libraries */
   /DISCARD/ :

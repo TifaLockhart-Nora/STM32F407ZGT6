@@ -37,7 +37,7 @@ lv_ui guider_ui;
  * 包括: 任务句柄 任务优先级 堆栈大小 创建任务
  */
 #define START_TASK_PRIO     1           /* 任务优先级 */
-#define START_STK_SIZE      128         /* 任务堆栈大小 */
+#define START_STK_SIZE      512         /* 任务堆栈大小 */
 TaskHandle_t StartTask_Handler;         /* 任务句柄 */
 void start_task(void *pvParameters);    /* 任务函数 */
 
@@ -67,7 +67,7 @@ void lvgl_demo(void)
 {
     lv_init();                                          /* lvgl系统初始化 */
     lv_port_disp_init();                                /* lvgl显示接口初始化,放在lv_init()的后面 */
-    // lv_port_indev_init();                               /* lvgl输入接口初始化,放在lv_init()的后面 */
+    lv_port_indev_init();                               /* lvgl输入接口初始化,放在lv_init()的后面 */
 
     xTaskCreate((TaskFunction_t )start_task,            /* 任务函数 */
                 (const char*    )"start_task",          /* 任务名称 */
@@ -97,14 +97,6 @@ void start_task(void *pvParameters)
                 (void*          )NULL,
                 (UBaseType_t    )LV_DEMO_TASK_PRIO,
                 (TaskHandle_t*  )&LV_DEMOTask_Handler);
-
-    /* LED测试任务 */
-    // xTaskCreate((TaskFunction_t )led_task,
-    //             (const char*    )"led_task",
-    //             (uint16_t       )LED_STK_SIZE,
-    //             (void*          )NULL,
-    //             (UBaseType_t    )LED_TASK_PRIO,
-    //             (TaskHandle_t*  )&LEDTask_Handler);
 
     taskEXIT_CRITICAL();            /* 退出临界区 */
     vTaskDelete(StartTask_Handler); /* 删除开始任务 */
@@ -140,15 +132,5 @@ void lv_demo_task(void *pvParameters)
  * @param       pvParameters : 传入参数(未用到)
  * @retval      无
  */
-// void led_task(void *pvParameters)
-// {
-//     pvParameters = pvParameters;
-    
-//     while(1)
-//     {
-//         // LED0_TOGGLE();
-//         vTaskDelay(1000);
-//     }
-// }
 
 

@@ -10,20 +10,26 @@
  *      INCLUDES
  *********************/
 #include "lv_port_disp_template.h"
-#include "../../lvgl.h"
+#include "lvgl.h"
 /* 导入lcd驱动头文件 */
 #include "lcd.h"
+#include "log.h"
 
 /*********************
  *      DEFINES
  *********************/
-#define USE_SRAM        0       /* 使用外部sram为1，否则为0 */
-#ifdef USE_SRAM
-// #include "./MALLOC/malloc.h"
+#define USE_SRAM        0     
+#if USE_SRAM
+#include "malloc.h"
 #endif
 
-#define MY_DISP_HOR_RES (240)   /* 屏幕宽度 */
-#define MY_DISP_VER_RES (320)   /* 屏幕高度 */
+#define MY_DISP_HOR_RES (800)   /* 屏幕宽度 */
+#define MY_DISP_VER_RES (480)   /* 屏幕高度 */
+
+/* CCMRAM(64KB) 可以放更大的缓冲区
+ * 800 * 40 * 2 = 64000 bytes ≈ 62.5KB
+ */
+#define LVGL_DRAW_BUF_LINES   (40)
 
 /**********************
  *      TYPEDEFS
@@ -69,7 +75,8 @@ void lcd_draw_fast_rgb_color(int16_t sx, int16_t sy,int16_t ex, int16_t ey, uint
 
     for(uint32_t i = 0; i < draw_size; i++)
     {
-        lcd_wr_data(color[i]);
+        // lcd_wr_data(color[i]);
+        LCD->LCD_RAM = color[i];
     }
 }
 
@@ -106,24 +113,48 @@ void lv_port_disp_init(void)
      *
      * 3. 全尺寸双缓冲区
      *      设置两个屏幕大小的全尺寸缓冲区，并且设置 disp_drv.full_refresh = 1。
-     *      这样，LVGL将始终以 'flush_cb' 的形式提供整个渲染屏幕，您只需更改帧缓冲区的地址。
-     */
-
-    /* 单缓冲区示例) */
+     *      这样，LVGL将始终以 'flush_cb' 的形式提供整个渲染屏幕，您只需更改帧缓冲区的地址。     */    /* 双缓冲区配置 */    
     static lv_disp_draw_buf_t draw_buf_dsc_1;
-#if USE_SRAM
-    static lv_color_t buf_1 = mymalloc(SRAMEX, MY_DISP_HOR_RES * MY_DISP_VER_RES);              /* 设置缓冲区的大小为屏幕的全尺寸大小 */
-    lv_disp_draw_buf_init(&draw_buf_dsc_1, buf_1, NULL, MY_DISP_HOR_RES * MY_DISP_VER_RES);     /* 初始化显示缓冲区 */
+#if USE_SRAM    
+    /* 外部SRAM双缓冲配置
+     * 双缓冲可以让渲染和刷新并行执行
+     * 每个缓冲区：800 * 24 * 2 = 38400 bytes = 37.5KB
+     * 两个缓冲区总共：75KB（SRAM有1MB，完全够用）
+     * 缓冲区行数不宜过大，否则读取慢会导致花屏
+     */
+    #define SRAM_BUF_LINES  20
+    
+    static lv_color_t *buf_1 = NULL;
+    // static lv_color_t *buf_2 = NULL;
+    
+    uint32_t buf_size_bytes = MY_DISP_HOR_RES * SRAM_BUF_LINES * sizeof(lv_color_t);
+    uint32_t buf_size_pixels = MY_DISP_HOR_RES * SRAM_BUF_LINES;
+    
+    buf_1 = (lv_color_t *)mymalloc(SRAMEX, buf_size_bytes);
+    // buf_2 = (lv_color_t *)mymalloc(SRAMEX, buf_size_bytes);
+    LOG_INFO("SRAM buf malloc ok!");
+    if (buf_1 == NULL) {
+        /* 分配失败，死循环报错 */
+        // while(1);
+        LOG_ERROR("SRAM buf malloc fail!");
+    }
+    
+    /* 双缓冲：传入两个缓冲区指针 */
+    lv_disp_draw_buf_init(&draw_buf_dsc_1, buf_1, NULL, buf_size_pixels);
+    LOG_INFO("lvgl disp buf init ok!");
 #else
-    static lv_color_t buf_1[MY_DISP_HOR_RES * 10];                                              /* 设置缓冲区的大小为 10 行屏幕的大小 */
-    lv_disp_draw_buf_init(&draw_buf_dsc_1, buf_1, NULL, MY_DISP_HOR_RES * 10);                  /* 初始化显示缓冲区 */
+    /* 放到 CCMRAM：减少主 RAM 压力（注意：CCMRAM 不可 DMA 访问，但当前未使用 DMA 刷屏） */
+    __attribute__((section(".ccmram"))) static lv_color_t buf_1[MY_DISP_HOR_RES * LVGL_DRAW_BUF_LINES];
+    lv_disp_draw_buf_init(&draw_buf_dsc_1, buf_1, NULL, MY_DISP_HOR_RES * LVGL_DRAW_BUF_LINES); /* 初始化显示缓冲区 */
+    // static lv_color_t buf_1[MY_DISP_HOR_RES * LVGL_DRAW_BUF_LINES];                                              /* ÉèÖÃ»º³åÇøµÄ´óÐ¡Îª 10 ÐÐÆÁÄ»µÄ´óÐ¡ */
+    // lv_disp_draw_buf_init(&draw_buf_dsc_1, buf_1, NULL, MY_DISP_HOR_RES * LVGL_DRAW_BUF_LINES);                  /* ³õÊ¼»¯ÏÔÊ¾»º³åÇø */
 #endif
 
     /* 双缓冲区示例) */
-//    static lv_disp_draw_buf_t draw_buf_dsc_2;
-//    static lv_color_t buf_2_1[MY_DISP_HOR_RES * 10];                                            /* 设置缓冲区的大小为 10 行屏幕的大小 */
-//    static lv_color_t buf_2_2[MY_DISP_HOR_RES * 10];                                            /* 设置另一个缓冲区的大小为 10 行屏幕的大小 */
-//    lv_disp_draw_buf_init(&draw_buf_dsc_2, buf_2_1, buf_2_2, MY_DISP_HOR_RES * 10);             /* 初始化显示缓冲区 */
+    // static lv_disp_draw_buf_t draw_buf_dsc_2;
+    // static lv_color_t buf_2_1[MY_DISP_HOR_RES * 20];                                            /* 设置缓冲区的大小为 20 行屏幕的大小 */
+    // static lv_color_t buf_2_2[MY_DISP_HOR_RES * 20];                                            /* 设置另一个缓冲区的大小为 20 行屏幕的大小 */
+    // lv_disp_draw_buf_init(&draw_buf_dsc_2, buf_2_1, buf_2_2, MY_DISP_HOR_RES * 20);             /* 初始化显示缓冲区 */
 
     /* 全尺寸双缓冲区示例) 并且在下面设置 disp_drv.full_refresh = 1 */
 //    static lv_disp_draw_buf_t draw_buf_dsc_3;
@@ -137,7 +168,7 @@ void lv_port_disp_init(void)
 
     static lv_disp_drv_t disp_drv;                  /* 显示设备的描述符 */
     lv_disp_drv_init(&disp_drv);                    /* 初始化为默认值 */
-
+    LOG_INFO("lv_disp_drv_init ok!");
     /* 建立访问显示设备的函数  */
 
     /* 设置显示设备的分辨率
@@ -146,6 +177,7 @@ void lv_port_disp_init(void)
     disp_drv.hor_res = lcddev.width;
     disp_drv.ver_res = lcddev.height;
 
+    LOG_INFO("lcd width:%d,height:%d",lcddev.width,lcddev.height);
     /* 用来将缓冲区的内容复制到显示设备 */
     disp_drv.flush_cb = disp_flush;
 
@@ -160,8 +192,16 @@ void lv_port_disp_init(void)
      * 但如果你有不同的 GPU，那么可以使用这个回调函数。 */
     //disp_drv.gpu_fill_cb = gpu_fill;
 
+    LOG_INFO("lv_disp_drv_register begin!");
     /* 注册显示设备 */
-    lv_disp_drv_register(&disp_drv);
+    lv_disp_t * disp = lv_disp_drv_register(&disp_drv);
+    if (disp == NULL)
+    {
+        LOG_ERROR("lv_disp_drv_register fail!");
+        /* code */
+    }
+    
+    LOG_INFO("lvgl disp drv register ok!");
 }
 
 /**********************
@@ -177,7 +217,8 @@ static void disp_init(void)
 {
     /*You code here*/
     lcd_init();         /* 初始化LCD */
-    lcd_display_dir(0); /* 设置横屏 */
+    lcd_display_dir(1); /* 设置横屏 */
+    lcd_scan_dir(DFT_SCAN_DIR); /* 默认扫描方向 */
 }
 
 /**

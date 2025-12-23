@@ -25,6 +25,7 @@
 /* USER CODE END 0 */
 
 SRAM_HandleTypeDef hsram1;
+SRAM_HandleTypeDef hsram2;
 
 /* FSMC initialization function */
 void MX_FSMC_Init(void)
@@ -55,20 +56,57 @@ void MX_FSMC_Init(void)
   Timing.AddressSetupTime = 15;
   Timing.AddressHoldTime = 15;
   Timing.DataSetupTime = 60;
-  Timing.BusTurnAroundDuration = 0;
-  Timing.CLKDivision = 16;
-  Timing.DataLatency = 17;
+  // Timing.BusTurnAroundDuration = 0;
+  // Timing.CLKDivision = 16;
+  // Timing.DataLatency = 17;
   Timing.AccessMode = FSMC_ACCESS_MODE_A;
   /* ExtTiming */
   ExtTiming.AddressSetupTime = 9;
   ExtTiming.AddressHoldTime = 15;
   ExtTiming.DataSetupTime = 9;
-  ExtTiming.BusTurnAroundDuration = 0;
-  ExtTiming.CLKDivision = 16;
-  ExtTiming.DataLatency = 17;
+  // ExtTiming.BusTurnAroundDuration = 0;
+  // ExtTiming.CLKDivision = 16;
+  // ExtTiming.DataLatency = 17;
   ExtTiming.AccessMode = FSMC_ACCESS_MODE_A;
 
   if (HAL_SRAM_Init(&hsram1, &Timing, &ExtTiming) != HAL_OK)
+  {
+    Error_Handler( );
+  }
+
+  /** Perform the SRAM2 memory initialization sequence
+  */
+  hsram2.Instance = FSMC_NORSRAM_DEVICE;
+  hsram2.Extended = FSMC_NORSRAM_EXTENDED_DEVICE;
+  /* hsram2.Init */
+  hsram2.Init.NSBank = FSMC_NORSRAM_BANK3;
+  hsram2.Init.DataAddressMux = FSMC_DATA_ADDRESS_MUX_DISABLE;
+  hsram2.Init.MemoryType = FSMC_MEMORY_TYPE_SRAM;
+  hsram2.Init.MemoryDataWidth = FSMC_NORSRAM_MEM_BUS_WIDTH_16;
+  hsram2.Init.BurstAccessMode = FSMC_BURST_ACCESS_MODE_DISABLE;
+  hsram2.Init.WaitSignalPolarity = FSMC_WAIT_SIGNAL_POLARITY_LOW;
+  hsram2.Init.WrapMode = FSMC_WRAP_MODE_DISABLE;
+  hsram2.Init.WaitSignalActive = FSMC_WAIT_TIMING_BEFORE_WS;
+  hsram2.Init.WriteOperation = FSMC_WRITE_OPERATION_ENABLE;
+  hsram2.Init.WaitSignal = FSMC_WAIT_SIGNAL_DISABLE;
+  hsram2.Init.ExtendedMode = FSMC_EXTENDED_MODE_DISABLE;
+  hsram2.Init.AsynchronousWait = FSMC_ASYNCHRONOUS_WAIT_DISABLE;  
+  hsram2.Init.WriteBurst = FSMC_WRITE_BURST_DISABLE;
+  hsram2.Init.PageSize = FSMC_PAGE_SIZE_NONE;  /* Timing - SRAM BANK3 时序配置（与正点原子 sram.c 保持一致）
+   * HCLK = 168MHz, 1个HCLK周期 ≈ 5.95ns
+   * AddressSetupTime = 2 => ~12ns
+   * DataSetupTime = 8 => ~48ns
+   */
+  Timing.AddressSetupTime = 2;    /* 地址建立时间 2*6ns=12ns（正点原子配置）*/
+  Timing.AddressHoldTime = 0;     /* 模式A不使用此参数 */
+  Timing.DataSetupTime = 8;       /* 数据建立时间 8*6ns=48ns（正点原子配置）*/
+  // Timing.BusTurnAroundDuration = 0; /* 正点原子配置 */
+  // Timing.CLKDivision = 16;        /* 异步模式下此值被忽略 */
+  // Timing.DataLatency = 17;        /* 异步模式下此值被忽略 */
+  Timing.AccessMode = FSMC_ACCESS_MODE_A;
+  /* ExtTiming */
+
+  if (HAL_SRAM_Init(&hsram2, &Timing, &Timing) != HAL_OK)
   {
     Error_Handler( );
   }
@@ -93,10 +131,19 @@ static void HAL_FSMC_MspInit(void){
   /* Peripheral clock enable */
   __HAL_RCC_FSMC_CLK_ENABLE();
 
-
-
   /** FSMC GPIO Configuration
+  PF0   ------> FSMC_A0
+  PF1   ------> FSMC_A1
+  PF2   ------> FSMC_A2
+  PF3   ------> FSMC_A3
+  PF4   ------> FSMC_A4
+  PF5   ------> FSMC_A5
   PF12   ------> FSMC_A6
+  PF13   ------> FSMC_A7
+  PF14   ------> FSMC_A8
+  PF15   ------> FSMC_A9
+  PG0   ------> FSMC_A10
+  PG1   ------> FSMC_A11
   PE7   ------> FSMC_D4
   PE8   ------> FSMC_D5
   PE9   ------> FSMC_D6
@@ -111,28 +158,44 @@ static void HAL_FSMC_MspInit(void){
   PD10   ------> FSMC_D15
   PD14   ------> FSMC_D0
   PD15   ------> FSMC_D1
+  PG2   ------> FSMC_A12
+  PG3   ------> FSMC_A13
+  PG4   ------> FSMC_A14
+  PG5   ------> FSMC_A15
   PD0   ------> FSMC_D2
   PD1   ------> FSMC_D3
   PD4   ------> FSMC_NOE
   PD5   ------> FSMC_NWE
+  PG10   ------> FSMC_NE3
   PG12   ------> FSMC_NE4
-  */
-  /* GPIO_InitStruct */
-  GPIO_InitStruct.Pin = GPIO_PIN_12;
+  */  /* GPIO_InitStruct - 使用 PULLUP 和 HIGH 速度提高信号稳定性 */
+  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3
+                          |GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_12|GPIO_PIN_13
+                          |GPIO_PIN_14|GPIO_PIN_15;
   GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;  /* 改为上拉，提高信号稳定性 */
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;  /* 降低速度，减少信号振铃 */
   GPIO_InitStruct.Alternate = GPIO_AF12_FSMC;
 
   HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
 
   /* GPIO_InitStruct */
-  GPIO_InitStruct.Pin = GPIO_PIN_7|GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10
+  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3
+                          |GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_10|GPIO_PIN_12;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+  GPIO_InitStruct.Alternate = GPIO_AF12_FSMC;
+
+  HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
+
+  /* GPIO_InitStruct - GPIOE 包含 NBL0(PE0), NBL1(PE1) 字节使能信号 */
+  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_7|GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10
                           |GPIO_PIN_11|GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14
                           |GPIO_PIN_15;
   GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
   GPIO_InitStruct.Alternate = GPIO_AF12_FSMC;
 
   HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
@@ -142,20 +205,11 @@ static void HAL_FSMC_MspInit(void){
                           |GPIO_PIN_15|GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_4
                           |GPIO_PIN_5;
   GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
   GPIO_InitStruct.Alternate = GPIO_AF12_FSMC;
 
   HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
-
-  /* GPIO_InitStruct */
-  GPIO_InitStruct.Pin = GPIO_PIN_12;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-  GPIO_InitStruct.Alternate = GPIO_AF12_FSMC;
-
-  HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
 
   /* USER CODE BEGIN FSMC_MspInit 1 */
   /* USER CODE END FSMC_MspInit 1 */
@@ -185,7 +239,18 @@ static void HAL_FSMC_MspDeInit(void){
   __HAL_RCC_FSMC_CLK_DISABLE();
 
   /** FSMC GPIO Configuration
+  PF0   ------> FSMC_A0
+  PF1   ------> FSMC_A1
+  PF2   ------> FSMC_A2
+  PF3   ------> FSMC_A3
+  PF4   ------> FSMC_A4
+  PF5   ------> FSMC_A5
   PF12   ------> FSMC_A6
+  PF13   ------> FSMC_A7
+  PF14   ------> FSMC_A8
+  PF15   ------> FSMC_A9
+  PG0   ------> FSMC_A10
+  PG1   ------> FSMC_A11
   PE7   ------> FSMC_D4
   PE8   ------> FSMC_D5
   PE9   ------> FSMC_D6
@@ -200,14 +265,24 @@ static void HAL_FSMC_MspDeInit(void){
   PD10   ------> FSMC_D15
   PD14   ------> FSMC_D0
   PD15   ------> FSMC_D1
+  PG2   ------> FSMC_A12
+  PG3   ------> FSMC_A13
+  PG4   ------> FSMC_A14
+  PG5   ------> FSMC_A15
   PD0   ------> FSMC_D2
   PD1   ------> FSMC_D3
   PD4   ------> FSMC_NOE
   PD5   ------> FSMC_NWE
+  PG10   ------> FSMC_NE3
   PG12   ------> FSMC_NE4
   */
 
-  HAL_GPIO_DeInit(GPIOF, GPIO_PIN_12);
+  HAL_GPIO_DeInit(GPIOF, GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3
+                          |GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_12|GPIO_PIN_13
+                          |GPIO_PIN_14|GPIO_PIN_15);
+
+  HAL_GPIO_DeInit(GPIOG, GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3
+                          |GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_10|GPIO_PIN_12);
 
   HAL_GPIO_DeInit(GPIOE, GPIO_PIN_7|GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10
                           |GPIO_PIN_11|GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14
@@ -216,8 +291,6 @@ static void HAL_FSMC_MspDeInit(void){
   HAL_GPIO_DeInit(GPIOD, GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10|GPIO_PIN_14
                           |GPIO_PIN_15|GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_4
                           |GPIO_PIN_5);
-
-  HAL_GPIO_DeInit(GPIOG, GPIO_PIN_12);
 
   /* USER CODE BEGIN FSMC_MspDeInit 1 */
 

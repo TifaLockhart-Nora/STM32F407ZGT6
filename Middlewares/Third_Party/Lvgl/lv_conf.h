@@ -56,10 +56,11 @@
 #define LV_MEM_CUSTOM                       0
 #if LV_MEM_CUSTOM == 0
     /* `lv_mem_alloc()`可获得的内存大小(以字节为单位)(>= 2kB) */
-    #define LV_MEM_SIZE                     (46U * 1024U)          /*[字节]*/
+    #define LV_MEM_SIZE                     (64U * 1024U)          /*[字节] - 使用外部SRAM可以增大 */
 
     /* 为内存池设置一个地址，而不是将其作为普通数组分配。也可以在外部SRAM中。 */
-    #define LV_MEM_ADR                      0     /*0: 未使用*/
+    /* 外部SRAM起始地址: 0x68000000, 避开已用的512KB(mem3base), 从0x68080000开始 */
+    #define LV_MEM_ADR                      0x68080000     /* 使用外部SRAM */
     /* 给内存分配器而不是地址，它将被调用来获得LVGL的内存池。例如my_malloc */
     #if LV_MEM_ADR == 0
         //#define LV_MEM_POOL_INCLUDE your_alloc_library  /* 如果使用外部分配器，取消注释 */
@@ -89,10 +90,10 @@
  ***********************************************************************************/
  
 /* 默认的显示刷新周期。LVGL使用这个周期重绘修改过的区域 */
-#define LV_DISP_DEF_REFR_PERIOD             4      /*[ms]*/
+#define LV_DISP_DEF_REFR_PERIOD             16      /*[ms]*/
 
 /* 输入设备的读取周期(以毫秒为单位) */
-#define LV_INDEV_DEF_READ_PERIOD            4     /*[ms]*/
+#define LV_INDEV_DEF_READ_PERIOD            10     /*[ms]*/
 
 /* 使用自定义tick源，以毫秒为单位告诉运行时间。它不需要手动更新 `lv_tick_inc()` */
 #define LV_TICK_CUSTOM                      1
@@ -256,7 +257,7 @@
  *-----------*/
 
 /* 1:显示CPU使用率和FPS */
-#define LV_USE_PERF_MONITOR                 0
+#define LV_USE_PERF_MONITOR                 1
 #if LV_USE_PERF_MONITOR
     #define LV_USE_PERF_MONITOR_POS LV_ALIGN_BOTTOM_RIGHT
 #endif
@@ -709,7 +710,7 @@
 #define LV_USE_DEMO_BENCHMARK               0
 
 /* LVGL压力测试 */
-#define LV_USE_DEMO_STRESS                  1
+#define LV_USE_DEMO_STRESS                  0
 
 /* 音乐播放器的演示 */
 #define LV_USE_DEMO_MUSIC                   0
