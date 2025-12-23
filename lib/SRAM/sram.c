@@ -24,7 +24,6 @@
 
 #include "sram.h"
 // #include "./SYSTEM/usart/usart.h"
-#include "stm32f4xx_hal.h"
 
 /**
  * @brief       ��ʼ�� �ⲿSRAM

@@ -13,23 +13,24 @@
 #include "lvgl.h"
 /* 导入lcd驱动头文件 */
 #include "lcd.h"
+#include "dma.h"
 #include "log.h"
 
 /*********************
  *      DEFINES
  *********************/
-#define USE_SRAM        0     
-#if USE_SRAM
-#include "malloc.h"
+#define USE_SRAM        0       /* 使用外部sram为1，否则为0 */
+#define USE_DMA_LCD     0       /* 使用DMA加速LCD传输为1，否则为0 (先禁用DMA调试) */
+
+/* DMA 单次最大传输数量 (65535 halfwords) */
+#define DMA_MAX_TRANSFER    65535
+
+#ifdef USE_SRAM
+// #include "./MALLOC/malloc.h"
 #endif
 
 #define MY_DISP_HOR_RES (800)   /* 屏幕宽度 */
 #define MY_DISP_VER_RES (480)   /* 屏幕高度 */
-
-/* CCMRAM(64KB) 可以放更大的缓冲区
- * 800 * 40 * 2 = 64000 bytes ≈ 62.5KB
- */
-#define LVGL_DRAW_BUF_LINES   (40)
 
 /**********************
  *      TYPEDEFS
@@ -58,27 +59,96 @@ static void disp_flush(lv_disp_drv_t * disp_drv, const lv_area_t * area, lv_colo
 /**********************
  *   GLOBAL FUNCTIONS
  **********************/
+
+/* 外部声明 DMA 传输完成标志 */
+extern volatile uint8_t lcd_dma_transfer_complete;
+
+#if USE_DMA_LCD
 /**
- * @brief       LCD加速绘制函数
- * @param       (sx,sy),(ex,ey):填充矩形对角坐标,区域大小为:(ex - sx + 1) * (ey - sy + 1)
- * @param       color:要填充的颜色
+ * @brief       LCD DMA加速绘制函数
+ * @param       (sx,sy),(ex,ey):填充矩形对角坐标
+ * @param       color:要填充的颜色数组指针
  * @retval      无
+ * @note        使用DMA传输，CPU可在传输期间处理其他任务
  */
-void lcd_draw_fast_rgb_color(int16_t sx, int16_t sy,int16_t ex, int16_t ey, uint16_t *color)
+void lcd_draw_fast_rgb_color(int16_t sx, int16_t sy, int16_t ex, int16_t ey, uint16_t *color)
 {
-    uint16_t w = ex-sx+1;
-    uint16_t h = ey-sy+1;
-
-    lcd_set_window(sx, sy, w, h);
+    uint16_t w = ex - sx + 1;
+    uint16_t h = ey - sy + 1;
     uint32_t draw_size = w * h;
+    
+    lcd_set_window(sx, sy, w, h);
     lcd_write_ram_prepare();
-
-    for(uint32_t i = 0; i < draw_size; i++)
+    
+    uint16_t *p = color;
+    uint32_t lcd_ram_addr = (uint32_t)&(LCD->LCD_RAM);
+    
+    /* 等待上一次DMA传输完成 */
+    while (!lcd_dma_transfer_complete);
+    
+    /* DMA传输 - 需要分批处理大数据量 */
+    while (draw_size > 0)
     {
-        // lcd_wr_data(color[i]);
-        LCD->LCD_RAM = color[i];
+        uint32_t transfer_size = (draw_size > DMA_MAX_TRANSFER) ? DMA_MAX_TRANSFER : draw_size;
+        
+        lcd_dma_transfer_complete = 0;
+        
+        /* 启动 DMA 传输: 源=颜色数据, 目标=LCD RAM */
+        HAL_DMA_Start_IT(&hdma_lcd, (uint32_t)p, lcd_ram_addr, transfer_size);
+        
+        /* 等待本次传输完成 */
+        while (!lcd_dma_transfer_complete);
+        
+        p += transfer_size;
+        draw_size -= transfer_size;
     }
 }
+
+#else
+/**
+ * @brief       LCD加速绘制函数 (优化版本 - 循环展开32次)
+ * @param       (sx,sy),(ex,ey):填充矩形对角坐标,区域大小为:(ex - sx + 1) * (ey - sy + 1)
+ * @param       color:要填充的颜色数组指针
+ * @retval      无
+ * @note        使用循环展开和指针优化，减少循环开销
+ */
+void lcd_draw_fast_rgb_color(int16_t sx, int16_t sy, int16_t ex, int16_t ey, uint16_t *color)
+{
+    uint16_t w = ex - sx + 1;
+    uint16_t h = ey - sy + 1;
+    uint32_t draw_size = w * h;
+    
+    lcd_set_window(sx, sy, w, h);
+    lcd_write_ram_prepare();
+    
+    /* 获取LCD RAM的地址指针 */
+    volatile uint16_t *lcd_ram = &(LCD->LCD_RAM);
+    uint16_t *p = color;
+    
+    /* 32次循环展开 */
+    uint32_t bulk_count = draw_size >> 5;  /* draw_size / 32 */
+    uint32_t remainder = draw_size & 0x1F; /* draw_size % 32 */
+    
+    /* 批量写入 (每次32个像素) */
+    while (bulk_count--)
+    {
+        *lcd_ram = *p++; *lcd_ram = *p++; *lcd_ram = *p++; *lcd_ram = *p++;
+        *lcd_ram = *p++; *lcd_ram = *p++; *lcd_ram = *p++; *lcd_ram = *p++;
+        *lcd_ram = *p++; *lcd_ram = *p++; *lcd_ram = *p++; *lcd_ram = *p++;
+        *lcd_ram = *p++; *lcd_ram = *p++; *lcd_ram = *p++; *lcd_ram = *p++;
+        *lcd_ram = *p++; *lcd_ram = *p++; *lcd_ram = *p++; *lcd_ram = *p++;
+        *lcd_ram = *p++; *lcd_ram = *p++; *lcd_ram = *p++; *lcd_ram = *p++;
+        *lcd_ram = *p++; *lcd_ram = *p++; *lcd_ram = *p++; *lcd_ram = *p++;
+        *lcd_ram = *p++; *lcd_ram = *p++; *lcd_ram = *p++; *lcd_ram = *p++;
+    }
+    
+    /* 处理剩余像素 */
+    while (remainder--)
+    {
+        *lcd_ram = *p++;
+    }
+}
+#endif /* USE_DMA_LCD */
 
 /**
  * @brief       初始化并注册显示设备
@@ -113,7 +183,8 @@ void lv_port_disp_init(void)
      *
      * 3. 全尺寸双缓冲区
      *      设置两个屏幕大小的全尺寸缓冲区，并且设置 disp_drv.full_refresh = 1。
-     *      这样，LVGL将始终以 'flush_cb' 的形式提供整个渲染屏幕，您只需更改帧缓冲区的地址。     */    /* 双缓冲区配置 */    
+     *      这样，LVGL将始终以 'flush_cb' 的形式提供整个渲染屏幕，您只需更改帧缓冲区的地址。
+     */    /* 单缓冲区示例) */
     static lv_disp_draw_buf_t draw_buf_dsc_1;
 #if USE_SRAM    
     /* 外部SRAM双缓冲配置
@@ -143,11 +214,10 @@ void lv_port_disp_init(void)
     lv_disp_draw_buf_init(&draw_buf_dsc_1, buf_1, NULL, buf_size_pixels);
     LOG_INFO("lvgl disp buf init ok!");
 #else
-    /* 放到 CCMRAM：减少主 RAM 压力（注意：CCMRAM 不可 DMA 访问，但当前未使用 DMA 刷屏） */
-    __attribute__((section(".ccmram"))) static lv_color_t buf_1[MY_DISP_HOR_RES * LVGL_DRAW_BUF_LINES];
-    lv_disp_draw_buf_init(&draw_buf_dsc_1, buf_1, NULL, MY_DISP_HOR_RES * LVGL_DRAW_BUF_LINES); /* 初始化显示缓冲区 */
-    // static lv_color_t buf_1[MY_DISP_HOR_RES * LVGL_DRAW_BUF_LINES];                                              /* ÉèÖÃ»º³åÇøµÄ´óÐ¡Îª 10 ÐÐÆÁÄ»µÄ´óÐ¡ */
-    // lv_disp_draw_buf_init(&draw_buf_dsc_1, buf_1, NULL, MY_DISP_HOR_RES * LVGL_DRAW_BUF_LINES);                  /* ³õÊ¼»¯ÏÔÊ¾»º³åÇø */
+    /* 单缓冲 40 行 - 使用 CCMRAM (64KB)
+     * 对于 CPU 同步刷新方式，大缓冲区减少刷新次数更有效 */
+    __attribute__((section(".ccmram"))) static lv_color_t buf_1[MY_DISP_HOR_RES * 40];  /* 64KB */
+    lv_disp_draw_buf_init(&draw_buf_dsc_1, buf_1, NULL, MY_DISP_HOR_RES * 40);          /* 单缓冲初始化 */
 #endif
 
     /* 双缓冲区示例) */
@@ -218,7 +288,6 @@ static void disp_init(void)
     /*You code here*/
     lcd_init();         /* 初始化LCD */
     lcd_display_dir(1); /* 设置横屏 */
-    lcd_scan_dir(DFT_SCAN_DIR); /* 默认扫描方向 */
 }
 
 /**

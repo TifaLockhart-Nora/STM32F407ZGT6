@@ -25,7 +25,6 @@
 #include "myiic.h"
 #include "24cxx.h"
 // #include "./SYSTEM/delay/delay.h"
-#include <stdint.h>
 
 /**
  * @brief       ��ʼ��IIC�ӿ�

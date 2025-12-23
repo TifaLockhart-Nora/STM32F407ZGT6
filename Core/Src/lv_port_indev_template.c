@@ -10,11 +10,11 @@
  *      INCLUDES
  *********************/
 #include "lv_port_indev_template.h"
-#include "../../lvgl.h"
+#include "lvgl.h"
 
 /* 导入驱动头文件 */
 #include "touch.h"
-// #include "./BSP/LCD/lcd.h"
+#include "lcd.h"
 // #include "./BSP/KEY/key.h"
 
 /*********************

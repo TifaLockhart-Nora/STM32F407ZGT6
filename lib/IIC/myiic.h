@@ -26,19 +26,18 @@
 #define __MYIIC_H
 
 // #include "./SYSTEM/sys/sys.h"
-#include "stm32f4xx.h"
 #include "stm32f4xx_hal.h"
-
+#include <stdint.h>
 
 /******************************************************************************************/
 /* ���� ���� */
 
 #define IIC_SCL_GPIO_PORT               GPIOB
-#define IIC_SCL_GPIO_PIN                GPIO_PIN_6
+#define IIC_SCL_GPIO_PIN                GPIO_PIN_8
 #define IIC_SCL_GPIO_CLK_ENABLE()       do{ __HAL_RCC_GPIOB_CLK_ENABLE(); }while(0)   /* PB��ʱ��ʹ�� */
 
 #define IIC_SDA_GPIO_PORT               GPIOB
-#define IIC_SDA_GPIO_PIN                GPIO_PIN_7
+#define IIC_SDA_GPIO_PIN                GPIO_PIN_9
 #define IIC_SDA_GPIO_CLK_ENABLE()       do{ __HAL_RCC_GPIOB_CLK_ENABLE(); }while(0)   /* PB��ʱ��ʹ�� */
 
 /******************************************************************************************/

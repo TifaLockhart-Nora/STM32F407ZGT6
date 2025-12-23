@@ -25,7 +25,6 @@
 #include "myiic.h"
 // #include "./SYSTEM/delay/delay.h"
 
-#include "lcd.h"
 /**
  * @brief       ��ʼ��IIC
  * @param       ��

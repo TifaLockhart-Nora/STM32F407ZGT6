@@ -52,19 +52,19 @@ void MX_FSMC_Init(void)
   hsram1.Init.AsynchronousWait = FSMC_ASYNCHRONOUS_WAIT_DISABLE;
   hsram1.Init.WriteBurst = FSMC_WRITE_BURST_DISABLE;
   hsram1.Init.PageSize = FSMC_PAGE_SIZE_NONE;
-  /* Timing */
+  /* Timing - LCD 读时序 */
   Timing.AddressSetupTime = 15;
   Timing.AddressHoldTime = 15;
   Timing.DataSetupTime = 60;
-  // Timing.BusTurnAroundDuration = 0;
+  Timing.BusTurnAroundDuration = 0;
   // Timing.CLKDivision = 16;
   // Timing.DataLatency = 17;
   Timing.AccessMode = FSMC_ACCESS_MODE_A;
-  /* ExtTiming */
-  ExtTiming.AddressSetupTime = 9;
+  /* ExtTiming - LCD 写时序 (优化后更快) */
+  ExtTiming.AddressSetupTime = 5;           /* 减少地址建立时间 */
   ExtTiming.AddressHoldTime = 15;
-  ExtTiming.DataSetupTime = 9;
-  // ExtTiming.BusTurnAroundDuration = 0;
+  ExtTiming.DataSetupTime = 5;              /* 减少数据建立时间 */
+  ExtTiming.BusTurnAroundDuration = 0;
   // ExtTiming.CLKDivision = 16;
   // ExtTiming.DataLatency = 17;
   ExtTiming.AccessMode = FSMC_ACCESS_MODE_A;
@@ -90,20 +90,21 @@ void MX_FSMC_Init(void)
   hsram2.Init.WriteOperation = FSMC_WRITE_OPERATION_ENABLE;
   hsram2.Init.WaitSignal = FSMC_WAIT_SIGNAL_DISABLE;
   hsram2.Init.ExtendedMode = FSMC_EXTENDED_MODE_DISABLE;
-  hsram2.Init.AsynchronousWait = FSMC_ASYNCHRONOUS_WAIT_DISABLE;  
+  hsram2.Init.AsynchronousWait = FSMC_ASYNCHRONOUS_WAIT_DISABLE;
   hsram2.Init.WriteBurst = FSMC_WRITE_BURST_DISABLE;
-  hsram2.Init.PageSize = FSMC_PAGE_SIZE_NONE;  /* Timing - SRAM BANK3 时序配置（与正点原子 sram.c 保持一致）
-   * HCLK = 168MHz, 1个HCLK周期 ≈ 5.95ns
-   * AddressSetupTime = 2 => ~12ns
-   * DataSetupTime = 8 => ~48ns
+  hsram2.Init.PageSize = FSMC_PAGE_SIZE_NONE;
+  /* Timing - 参考正点原子 SRAM 时序配置
+   * HCLK = 168MHz, 1个HCLK周期 ≈ 6ns
+   * AddressSetupTime = 2 => 12ns
+   * DataSetupTime = 8 => 48ns
    */
-  Timing.AddressSetupTime = 2;    /* 地址建立时间 2*6ns=12ns（正点原子配置）*/
-  Timing.AddressHoldTime = 0;     /* 模式A不使用此参数 */
-  Timing.DataSetupTime = 8;       /* 数据建立时间 8*6ns=48ns（正点原子配置）*/
-  // Timing.BusTurnAroundDuration = 0; /* 正点原子配置 */
-  // Timing.CLKDivision = 16;        /* 异步模式下此值被忽略 */
-  // Timing.DataLatency = 17;        /* 异步模式下此值被忽略 */
-  Timing.AccessMode = FSMC_ACCESS_MODE_A;
+  Timing.AddressSetupTime = 2;              /* 地址建立时间 */
+  Timing.AddressHoldTime = 0;               /* 地址保持时间，模式A未用 */
+  Timing.DataSetupTime = 8;                 /* 数据建立时间 */
+  Timing.BusTurnAroundDuration = 0;         /* 总线转换周期 - 必须设置! */
+  Timing.CLKDivision = 0;                   /* 时钟分频，异步模式不用 */
+  Timing.DataLatency = 0;                   /* 数据延迟，异步模式不用 */
+  Timing.AccessMode = FSMC_ACCESS_MODE_A;   /* 模式A */
   /* ExtTiming */
 
   if (HAL_SRAM_Init(&hsram2, &Timing, &Timing) != HAL_OK)
@@ -168,13 +169,14 @@ static void HAL_FSMC_MspInit(void){
   PD5   ------> FSMC_NWE
   PG10   ------> FSMC_NE3
   PG12   ------> FSMC_NE4
-  */  /* GPIO_InitStruct - 使用 PULLUP 和 HIGH 速度提高信号稳定性 */
+  */
+  /* GPIO_InitStruct */
   GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3
                           |GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_12|GPIO_PIN_13
                           |GPIO_PIN_14|GPIO_PIN_15;
   GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;  /* 改为上拉，提高信号稳定性 */
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;  /* 降低速度，减少信号振铃 */
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
   GPIO_InitStruct.Alternate = GPIO_AF12_FSMC;
 
   HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
@@ -189,10 +191,10 @@ static void HAL_FSMC_MspInit(void){
 
   HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
 
-  /* GPIO_InitStruct - GPIOE 包含 NBL0(PE0), NBL1(PE1) 字节使能信号 */
-  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_7|GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10
-                          |GPIO_PIN_11|GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14
-                          |GPIO_PIN_15;
+  /* GPIO_InitStruct - GPIOE: D4-D12, NBL0(PE0), NBL1(PE1) */
+  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_7|GPIO_PIN_8|GPIO_PIN_9
+                          |GPIO_PIN_10|GPIO_PIN_11|GPIO_PIN_12|GPIO_PIN_13
+                          |GPIO_PIN_14|GPIO_PIN_15;
   GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
@@ -201,9 +203,9 @@ static void HAL_FSMC_MspInit(void){
   HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
   /* GPIO_InitStruct */
-  GPIO_InitStruct.Pin = GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10|GPIO_PIN_14
-                          |GPIO_PIN_15|GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_4
-                          |GPIO_PIN_5;
+  GPIO_InitStruct.Pin = GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10|GPIO_PIN_11
+                          |GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15
+                          |GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_4|GPIO_PIN_5;
   GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;

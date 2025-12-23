@@ -535,11 +535,11 @@ uint8_t tp_init(void)
     }
     else if (lcddev.id == 0X1963 || lcddev.id == 0X7084 || lcddev.id == 0X7016)     /* SSD1963 7�������� 7��800*480/1024*600 RGB�� */
     {
-        // if (!ft5206_init())             /* ����IC��FTϵ�еľ�ִ��ft5206_init�����Լ�ʹ��ft5206_scanɨ�躯�� */
-        // {
-        //     tp_dev.scan = ft5206_scan;  /* ɨ�躯��ָ��FT5206������ɨ�� */
-        // }
-        // else                            /* ����IC��GTϵ�еľ�ִ��gt9xxx_init�����Լ�ʹ��gt9xxx_scanɨ�躯�� */
+        if (!ft5206_init())             /* ����IC��FTϵ�еľ�ִ��ft5206_init�����Լ�ʹ��ft5206_scanɨ�躯�� */
+        {
+            tp_dev.scan = ft5206_scan;  /* ɨ�躯��ָ��FT5206������ɨ�� */
+        }
+        else                            /* ����IC��GTϵ�еľ�ִ��gt9xxx_init�����Լ�ʹ��gt9xxx_scanɨ�躯�� */
         {
             gt9xxx_init();
             tp_dev.scan = gt9xxx_scan;  /* ɨ�躯��ָ��GT9147������ɨ�� */

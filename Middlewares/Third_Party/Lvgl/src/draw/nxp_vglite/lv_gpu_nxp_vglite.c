@@ -54,7 +54,7 @@
 /* Enable BLIT quality degradation workaround for RT595 */
 #define RT595_BLIT_WRKRND_ENABLED 1
 
-/* If LV_HOR_RES_MAX/LV_VER_RES_MAX is higher than this value, workaround will be enabled */
+/* If LV_HOR_RES/LV_VER_RES is higher than this value, workaround will be enabled */
 #define RT595_BLIT_WRKRND_THR 352
 
 /* Print detailed info to SDK console (NOT to LVGL log system) */
@@ -76,7 +76,7 @@
 /* Internal compound symbol */
 #if (defined(CPU_MIMXRT595SFFOB) || defined(CPU_MIMXRT595SFFOB_cm33) || \
     defined(CPU_MIMXRT595SFFOC) || defined(CPU_MIMXRT595SFFOC_cm33)) && \
-    ((LV_HOR_RES_MAX > RT595_BLIT_WRKRND_THR) || (LV_VER_RES_MAX > RT595_BLIT_WRKRND_THR)) && \
+    ((LV_HOR_RES > RT595_BLIT_WRKRND_THR) || (LV_VER_RES > RT595_BLIT_WRKRND_THR)) && \
     RT595_BLIT_WRKRND_ENABLED
 #define _BLIT_SPLIT_ENABLED 1
 #else

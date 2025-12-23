@@ -32,8 +32,8 @@
 
 // #include "./SYSTEM/sys/sys.h"
 #include "gt9xxx.h"
-
-
+#include "ft5206.h"
+#include "stm32f4xx_hal.h"
 
 /******************************************************************************************/
 /* ���败��������IC T_PEN/T_CS/T_MISO/T_MOSI/T_SCK ���� ���� */

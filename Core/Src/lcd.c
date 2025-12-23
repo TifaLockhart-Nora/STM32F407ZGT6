@@ -614,7 +614,7 @@ void lcd_init(void)
     HAL_GPIO_Init(LCD_BL_GPIO_PORT, &gpio_init_struct); /* LCD_BL引脚模式设置(推挽输出) */
 
 
-   /* ³¢ÊÔ9341 IDµÄ¶ÁÈ¡ */
+     /* ³¢ÊÔ9341 IDµÄ¶ÁÈ¡ */
     lcd_wr_regno(0xD3);
     lcddev.id = lcd_rd_data();  /* dummy read */
     lcddev.id = lcd_rd_data();  /* ¶Áµ½0x00 */
@@ -671,7 +671,7 @@ void lcd_init(void)
                     lcddev.id |= lcd_rd_data(); /* ¶Á»Ø0x00 */
                     
                     HAL_Delay(5);                /* µÈ´ý5ms, ÒòÎª0XC501Ö¸Áî¶Ô1963À´Ëµ¾ÍÊÇÈí¼þ¸´Î»Ö¸Áî, µÈ´ý5msÈÃ1963¸´Î»Íê³ÉÔÙ²Ù×÷ */
-
+                    
                     if (lcddev.id != 0x5510)    /* Ò²²»ÊÇNT5510,³¢ÊÔ¿´¿´ÊÇ²»ÊÇILI9806 */
                     {
                         lcd_wr_regno(0XD3);
@@ -708,30 +708,9 @@ void lcd_init(void)
     {
         lcd_ex_st7789_reginit();    /* Ö´ÐÐST7789³õÊ¼»¯ */
     }
-    else if (lcddev.id == 0x9341)
-    {
-        lcd_ex_ili9341_reginit();   /* Ö´ÐÐILI9341³õÊ¼»¯ */
-    }
-    else if (lcddev.id == 0x5310)
-    {
-        lcd_ex_nt35310_reginit();   /* Ö´ÐÐNT35310³õÊ¼»¯ */
-    }
-    else if (lcddev.id == 0x7796)
-    {
-        lcd_ex_st7796_reginit();    /* Ö´ÐÐST7796³õÊ¼»¯ */
-    }
-    else if (lcddev.id == 0x5510)
-    {
-        lcd_ex_nt35510_reginit();   /* Ö´ÐÐNT35510³õÊ¼»¯ */
-    }
     else if (lcddev.id == 0x9806)
     {
         lcd_ex_ili9806_reginit();   /* Ö´ÐÐILI9806³õÊ¼»¯ */
-    }
-    else if (lcddev.id == 0x1963)
-    {
-        lcd_ex_ssd1963_reginit();   /* Ö´ÐÐSSD1963³õÊ¼»¯ */
-        lcd_ssd_backlight_set(100); /* ±³¹âÉèÖÃÎª×îÁÁ */
     }
 
     FSMC_NORSRAM_TimingTypeDef fsmc_write_handle = {0};
@@ -752,9 +731,10 @@ void lcd_init(void)
         FSMC_NORSRAM_Extended_Timing_Init(hsram1.Extended, &fsmc_write_handle, hsram1.Init.NSBank, hsram1.Init.ExtendedMode);
     }
 
+
     lcd_display_dir(0); /* 默认为竖屏 */
     LCD_BL(1);          /* 点亮背光 */
-    // lcd_clear(BLUE);
+    lcd_clear(WHITE);
 }
 
 /**
@@ -1223,7 +1203,6 @@ void lcd_show_string(uint16_t x, uint16_t y, uint16_t width, uint16_t height, ui
     }
 }
 
-#include "stm32f4xx.h"
 
 static uint8_t dwt_inited = 0;
 

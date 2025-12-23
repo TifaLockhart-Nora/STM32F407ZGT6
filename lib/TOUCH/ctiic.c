@@ -24,7 +24,6 @@
  
 #include "ctiic.h"
 // #include "./SYSTEM/delay/delay.h"
-#include "stm32f4xx.h"
 #include "stm32f4xx_hal.h"
 
 /**

@@ -26,6 +26,7 @@
 #define __CT_IIC_H
 
 // #include "./SYSTEM/sys/sys.h"
+#include "stm32f4xx_hal.h"
 #include <stdint.h>
 
 /******************************************************************************************/
