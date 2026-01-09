@@ -61,9 +61,9 @@ void MX_FSMC_Init(void)
   // Timing.DataLatency = 17;
   Timing.AccessMode = FSMC_ACCESS_MODE_A;
   /* ExtTiming - LCD 写时序 (优化后更快) */
-  ExtTiming.AddressSetupTime = 5;           /* 减少地址建立时间 */
+  ExtTiming.AddressSetupTime = 2;           /* 减少地址建立时间 */
   ExtTiming.AddressHoldTime = 15;
-  ExtTiming.DataSetupTime = 5;              /* 减少数据建立时间 */
+  ExtTiming.DataSetupTime = 2;              /* 减少数据建立时间 */
   ExtTiming.BusTurnAroundDuration = 0;
   // ExtTiming.CLKDivision = 16;
   // ExtTiming.DataLatency = 17;

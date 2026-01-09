@@ -27,6 +27,7 @@
 #include "usart.h"
 #include "usb_device.h"
 #include "gpio.h"
+#include "uart_dma_rx.h"
 #include "fsmc.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -39,6 +40,7 @@
 #include "lvgl.h"
 #include "lvgl_demo.h"
 #include "sram.h"
+#include "uart_dma_rx.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -354,7 +356,7 @@ void process_task(void *arg)
 
   while (1)
   {
-    LOG_INFO("Task2 is running");
+    // LOG_INFO("Task2 is running");
     // 使用绝对延时：确保任务以精确�????? 1 秒周期执�?????
     vTaskDelayUntil(&xLastWakeTime, xPeriod);
   }
@@ -484,6 +486,8 @@ int main(void)
   // lcd_show_string(10, 76, 220, 16, 16, "ATOM@ALIENTEK", RED);
   // xTaskCreate(start_task, "Task1", 2048, NULL, 1, NULL);
   xTaskCreate(process_task, "Task2", 128, NULL, 1, NULL);
+  // UART_Rx_Task_Create();  // 创建串口接收任务
+  UART_DMA_Rx_Task_Create();
   lvgl_demo();
   /* USER CODE END 2 */
 

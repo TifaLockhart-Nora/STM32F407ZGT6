@@ -122,28 +122,5 @@ void StartDefaultTask(void *argument)
   /* USER CODE END StartDefaultTask */
 }
 
-/* Private application code --------------------------------------------------*/
-/* USER CODE BEGIN Application */
-
-/* USER CODE BEGIN Application */
-
-/**
-  * @brief  Function implementing the led0Task thread.
-  * @param  argument: Not used
-  * @retval None
-  */
-void StartLed0Task(void *argument)
-{
-  /* USER CODE BEGIN StartLed0Task */
-  /* Infinite loop */
-  for(;;)
-  {
-    HAL_GPIO_TogglePin(LED0_GPIO_Port, LED0_Pin);
-    osDelay(500);
-  }
-  /* USER CODE END StartLed0Task */
-}
-
-/* USER CODE END Application */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

@@ -59,7 +59,7 @@
 
 /* mem3�ڴ�����趨.mem3������SRAM */
 #define MEM3_BLOCK_SIZE         32                              /* �ڴ���СΪ32�ֽ� */
-#define MEM3_MAX_SIZE           512 *1024                        /* �������ڴ�963K�����������С����ʵ�ʹ������� */
+#define MEM3_MAX_SIZE           963 *1024                        /* �������ڴ�963K�����������С����ʵ�ʹ������� */
 #define MEM3_ALLOC_TABLE_SIZE   MEM3_MAX_SIZE/MEM3_BLOCK_SIZE   /* �ڴ����С */
 
 

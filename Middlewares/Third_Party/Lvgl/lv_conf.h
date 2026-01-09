@@ -59,7 +59,7 @@
     #define LV_MEM_SIZE                     (60U * 1024U)          /*[字节] 减小到32KB以节省内部SRAM*/
 
     /* 为内存池设置一个地址，而不是将其作为普通数组分配。也可以在外部SRAM中。 */
-    #define LV_MEM_ADR                      0     /*0: 使用内部SRAM，DMA可访问*/
+    #define LV_MEM_ADR                      0x68000000     /*0: 使用内部SRAM，DMA可访问*/
     /* 给内存分配器而不是地址，它将被调用来获得LVGL的内存池。例如my_malloc */
     #if LV_MEM_ADR == 0
         //#define LV_MEM_POOL_INCLUDE your_alloc_library  /* 如果使用外部分配器，取消注释 */
@@ -550,6 +550,7 @@
 #define LV_USE_WIN                          1
 
 #define LV_USE_SPAN                         1
+
 #if LV_USE_SPAN
     /* 一个行文本可以包含最大数量的span描述符 */
     #define LV_SPAN_SNIPPET_STACK_SIZE      64
@@ -690,7 +691,7 @@
                                         
  ***********************************************************************************/
 /* 允许用库构建示例 */
-#define LV_BUILD_EXAMPLES                   1
+#define LV_BUILD_EXAMPLES                   0
 
 /*===================
  * 演示使用

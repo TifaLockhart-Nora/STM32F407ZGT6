@@ -726,8 +726,8 @@ void lcd_init(void)
     else if (lcddev.id == 0x5310 || lcddev.id == 0x7796 || lcddev.id == 0x5510 || lcddev.id == 0x9806)  /* Èç¹ûÊÇÕâ¼¸¸öIC, ÔòÉèÖÃWRÊ±ÐòÎª×î¿ì */
     {
         /* ÖØÐÂÅäÖÃÐ´Ê±Ðò¿ØÖÆ¼Ä´æÆ÷µÄÊ±Ðò */
-        fsmc_write_handle.AddressSetupTime = 2; /* µØÖ·½¨Á¢Ê±¼ä(ADDSET)Îª2¸öfsmc_ker_ck=6*2=12ns */
-        fsmc_write_handle.DataSetupTime = 2;    /* Êý¾Ý±£³ÖÊ±¼ä(DATAST)Îª2¸öfsmc_ker_ck=6*2=12ns */
+        fsmc_write_handle.AddressSetupTime = 5; /* µØÖ·½¨Á¢Ê±¼ä(ADDSET)Îª2¸öfsmc_ker_ck=6*2=12ns */
+        fsmc_write_handle.DataSetupTime = 5;    /* Êý¾Ý±£³ÖÊ±¼ä(DATAST)Îª2¸öfsmc_ker_ck=6*2=12ns */
         FSMC_NORSRAM_Extended_Timing_Init(hsram1.Extended, &fsmc_write_handle, hsram1.Init.NSBank, hsram1.Init.ExtendedMode);
     }
 
